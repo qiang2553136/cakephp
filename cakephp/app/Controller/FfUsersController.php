@@ -14,11 +14,11 @@ class FfUsersController extends AppController{
 //登陆
     public function Login() {
 
-      $params = $this->request->query;
+      $params = $this->request->data;
       $message = '';
 
-      echo json_encode(self::name);
-      exit();
+      // echo json_encode(self::name);
+      // exit();
 
       $user = $this->Ff_user->find('first',array(
 				'conditions' => array(
