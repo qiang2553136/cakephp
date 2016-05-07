@@ -9,38 +9,59 @@ class FfUsersController extends AppController{
 
     public $uses = array('Ff_user','Ff_purchase','Ff_product',
     'Ff_effective','Ff_price','Ff_regist','Ff_score','Ff_present',
-    'Ff_software','Ff_msgcheck');
+    'Ff_software','Ff_msgcheck','Ff_loginrecord');
 
 //登陆
     public function Login() {
 
-      $params = $this->request->data;
+      $params = $this->request->query;
       $message = '';
 
-      // echo json_encode(self::name);
-      // exit();
+      $imei = $params['imei'];
+      $software_type = $params['soft'];
+      $type = $params['type'];
+      $present_time = time();
+
 
       $user = $this->Ff_user->find('first',array(
-				'conditions' => array(
-								'Phone_number' => $params['phone_number'],
-                'Password' => md5($params['password'])
-              )
-          )
-         );
+  				'conditions' => array(
+  								'Phone_number' => $params['username'],
+                  'Password' => md5($params['password'])
+                )
+            )
+           );
+      //username也可以当作用户名登陆
+      if(!$user){
+        $user = $this->Ff_user->find('first',array(
+          'conditions' => array(
+                  'Username' => $params['username'],
+                  'Password' => md5($params['password'])
+                 )
+             )
+            );
+      }
 
-    if ($user) {
-      $message = '登录成功！';
-			$result = array('success' => true,'message' =>$message ,'data'=>$user['Ff_user']);
-		} else {
-      $message = '用户名或密码错误！';
-      $result = array('success' => false,'message' => $message);
-		}
+      if ($user) {
+        $message = '登录成功！';
+        //不返回密码
+        unset($user['Ff_user']['Password']);
+        $result = array('success' => true,'message' =>$message ,'data'=>$user['Ff_user']);
+       //保存登陆记录
+       $user_id = $user['Ff_user']['Id'];
+       $this->Ff_loginrecord->save(array(
+          'user_id'=>$user_id,'software_type'=>$software_type,'type'=>$type,
+          'imei'=>$imei,'present_time'=>$present_time
+        ));
+      } else {
+        $message = '用户名或密码错误！';
+        $result = array('success' => false,'message' => $message);
+      }
 
     $this->log($message);
     echo json_encode($result);
     exit();
 
-    }
+}
 
 
 //产品
