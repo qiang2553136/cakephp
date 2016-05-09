@@ -14,7 +14,7 @@ class FfUsersController extends AppController{
 //登陆
     public function Login() {
 
-      $params = $this->request->query;
+      $params = $this->request->data;
       $message = '';
 
       $imei = $params['imei'];
@@ -45,7 +45,7 @@ class FfUsersController extends AppController{
         $message = '登录成功！';
         //不返回密码
         unset($user['Ff_user']['Password']);
-        $result = array('success' => true,'message' =>$message ,'data'=>$user['Ff_user']);
+        $result = array('success' => 1,'message' =>$message ,'data'=>$user['Ff_user']);
        //保存登陆记录
        $user_id = $user['Ff_user']['Id'];
        $this->Ff_loginrecord->save(array(
@@ -54,7 +54,7 @@ class FfUsersController extends AppController{
         ));
       } else {
         $message = '用户名或密码错误！';
-        $result = array('success' => false,'message' => $message);
+        $result = array('success' => 0,'message' => $message);
       }
 
     $this->log($message);
@@ -176,11 +176,11 @@ public function Purchases(){
 
   			if ($r) {
           $message = '充值成功！';
-  				echo json_encode (array('success' => true,'message' => $message ));
+  				echo json_encode (array('success' => 1,'message' => $message ));
 
   			} else {
           $message = '充值失败！';
-  				echo json_encode (array('success' => false,'message' => $message));
+  				echo json_encode (array('success' => 0,'message' => $message));
 
   			}
         $this->log($message);
@@ -188,7 +188,7 @@ public function Purchases(){
 
   		} else {
         $message = '充值失败！(系统错误)';
-  			echo json_encode (array('success' => false,'message' => $message));
+  			echo json_encode (array('success' => 0,'message' => $message));
 
 
   		}
@@ -217,12 +217,12 @@ public function Price(){
         }
 
         $message = '获取价格成功！';
-  			echo json_encode(array('success' => true,'message' => $message ,'data' => $productArray));
+  			echo json_encode(array('success' => 1,'message' => $message ,'data' => $productArray));
 
   		} else {
 
         $message = '非法参数！';
-  			echo json_encode(array('success' => false,'message' => $message));
+  			echo json_encode(array('success' => 0,'message' => $message));
 
   		}
 
@@ -255,11 +255,11 @@ public function UserProducts(){
         }
 
         $message = '查询成功！';
-  			echo json_encode(array('success' => true,'message' => $message ,'data' => $productArray));
+  			echo json_encode(array('success' => 1,'message' => $message ,'data' => $productArray));
 
   		} else {
         $message = '非法参数';
-  			echo json_encode(array('success' => false,'message' => $message));
+  			echo json_encode(array('success' => 0,'message' => $message));
 
   		}
       $this->log($message);
@@ -269,7 +269,7 @@ public function UserProducts(){
 //RegistProduct
 public function RegistProduct(){
 
-  $params = $this->request->data;
+  $params = $this->request->query;
   $message = '';
 
   $productArray = array();
@@ -302,23 +302,15 @@ public function RegistProduct(){
   $days = $effRes['Ff_effective']['days'];
   $expire_time = $effective_time + $days*24*60*60;
   $effective_type = $params['effective_type'];
-  $data = array('user_id'=>$uid,'product_id'=>$params['product_id'],
-                        'purchases_time'=>time(),'valid_time'=>$effective_time,
-                      'expire_time'=>$expire_time,'effective_type'=>$effective_type);
 
    $user = $this->Ff_user->findById($uid);
 
     if($params['price']<0){
       $message = '价格有误请联系管理员！';
-      echo json_encode(array('success' => false,'message' => $message));
+      echo json_encode(array('success' => 0,'message' => $message));
       $this->log($message);
       exit();
     }
-
-  		if ($this->Ff_regist->save($data)) {
-
-        $rid = $this->Ff_regist->id;
-        $info = array('expire_time'=>$expire_time,'valid_time'=>$effective_time);
 
           //如果积分足够先扣积分
           if($user['Ff_user']['Score']-$params['price']>=0){
@@ -326,14 +318,21 @@ public function RegistProduct(){
             $user['Ff_user']['Score']=$user['Ff_user']['Score']-$params['price'];
 
             if ($this->Ff_user->save(array('id'=>$uid,'Score'=>$user['Ff_user']['Score']))) {
-                $r = $this->Ff_regist->findById($rid);
+
 
               $message = '购买成功！';
-              echo json_encode(array('success' => true,'message' => $message,'data'=>$r['Ff_regist']));
+
+              $data = array('user_id'=>$uid,'product_id'=>$params['product_id'],
+                                    'purchases_time'=>time(),'valid_time'=>$effective_time,
+                                  'expire_time'=>$expire_time,'effective_type'=>$effective_type,
+                                'consume_score'=>$params['price'],'consume_balance'=>0);
+              $r = $this->Ff_regist->save($data);
+
+              echo json_encode(array('success' => 1,'message' => $message,'data'=>$r['Ff_regist']));
 
             }else{
               $message = '购买失败！';
-              echo json_encode(array('success' => false,'message' => $message));
+              echo json_encode(array('success' => 0,'message' => $message));
 
             }
 
@@ -341,22 +340,33 @@ public function RegistProduct(){
             exit();
 
           }else{
+            //积分不足扣除全部积分
+            $consume_score=$user['Ff_user']['Score'];
 
             $user['Ff_user']['Score']=$user['Ff_user']['Score']-$params['price'];
             $user['Ff_user']['Balance']=$user['Ff_user']['Balance']+$user['Ff_user']['Score'];
+
+            $consume_balance=-$user['Ff_user']['Score'];
 
             if($user['Ff_user']['Balance']>=0){
 
               if ($this->Ff_user->save(array('id'=>$uid,'Balance'=>$user['Ff_user']['Balance'],'Score'=>0))) {
 
-                $r = $this->Ff_regist->findById($rid);
+
                 $message = '购买成功！';
-                echo json_encode(array('success' => true,'message' => $message,'data'=>$r['Ff_regist']));
+
+                $data = array('user_id'=>$uid,'product_id'=>$params['product_id'],
+                                      'purchases_time'=>time(),'valid_time'=>$effective_time,
+                                    'expire_time'=>$expire_time,'effective_type'=>$effective_type,
+                                  'consume_score'=>$consume_score,'consume_balance'=>$consume_balance);
+                $r = $this->Ff_regist->save($data);
+
+                echo json_encode(array('success' => 1,'message' => $message,'data'=>$r['Ff_regist']));
 
               }else{
 
                 $message = '购买失败！';
-                echo json_encode(array('success' => false,'message' => $message));
+                echo json_encode(array('success' => 0,'message' => $message));
 
               }
 
@@ -366,17 +376,12 @@ public function RegistProduct(){
             }else{
 
               $message = '购买失败！';
-              echo json_encode(array('success' => false,'message' => '购买失败！'));
+              echo json_encode(array('success' => 0,'message' => '购买失败！余额不足'));
 
             }
             $this->log($message);
             exit();
           }
-      }else{
-        $message = '购买失败！（系统错误）';
-        echo json_encode(array('success' => false,'message' => $message));
-
-      }
 
       $this->log($message);
       exit();
@@ -389,6 +394,10 @@ public function PresentScore (){
 
      $params = $this->request->data;
      $message = '';
+     $description = '';
+     if(array_key_exists('description',$params)){
+       $description = $params['description'];
+     }
 
      $time = time();
      $s=$this->Ff_software->find('first',array(
@@ -396,7 +405,7 @@ public function PresentScore (){
          'software_type' => $params['software_type']
        )
      ));
-
+    //执行SQL语句
      $sql = 'SELECT `Ff_score`.`id`, `Ff_score`.`days`, `Ff_score`.`score`, `Ff_score`.`software_type_value` FROM `fenfen`.`ff_scores` AS `Ff_score` WHERE software_type_value & '.$s['Ff_software']['software_type_value'].' != 0';
      $rule = $this->Ff_score->query($sql);
 
@@ -431,19 +440,19 @@ public function PresentScore (){
 
          if($time-$present['Ff_present']['present_time']>($ruletime*60*60*24)){
 
-           $this->Ff_present->save(array('user_id'=>$user['Id'],'present_time'=>$time,'score'=>$rule['Ff_score']['score']));
+           $this->Ff_present->save(array('user_id'=>$user['Id'],'present_time'=>$time,'score'=>$rule['Ff_score']['score'],'description'=>$description));
 
            $user['Score'] = $user['Score']+$rule['Ff_score']['score'];
 
            $this->Ff_user->save(array('id'=>$user['Id'],'Score'=>$user['Score']));
 
            $message = '积分领取成功！';
-           echo json_encode(array('success' => true,'message' => $message,'data'=>$user));
+           echo json_encode(array('success' => 1,'message' => $message,'data'=>$user));
 
          }else{
 
            $message = '您已经获得该积分,不能重复领取！';
-           echo json_encode(array('success' => false,'message' => $message));
+           echo json_encode(array('success' => 0,'message' => $message));
 
          }
 
@@ -451,7 +460,7 @@ public function PresentScore (){
         exit();
 
        }else{
-         $this->Ff_present->save(array('user_id'=>$user['Id'],'present_time'=>$time,'score'=>$rule['Ff_score']['score']));
+         $this->Ff_present->save(array('user_id'=>$user['Id'],'present_time'=>$time,'score'=>$rule['Ff_score']['score'],'description'=>$description));
 
          $user = $this->Ff_user->findById($user['Id']);
 
@@ -462,7 +471,7 @@ public function PresentScore (){
          $this->Ff_user->save(array('id'=>$user['Id'],'Score'=>$user['Score']));
 
          $message = '积分领取成功！';
-         echo json_encode(array('success' => true,'message' => $message,'data'=>$user));
+         echo json_encode(array('success' => 1,'message' => $message,'data'=>$user));
 
        }
 
@@ -502,7 +511,7 @@ public function RegistCheck (){
 
       if(time()-$check['present_time']>$overduedays){
         $message = '验证码失效，请重新申请！';
-        echo json_encode(array('success' => false,'message' => $message));
+        echo json_encode(array('success' => 0,'message' => $message));
         $this->log($message);
         exit();
       }
@@ -520,7 +529,7 @@ public function RegistCheck (){
 
      if ($user) {
       $message = '此手机号已存在！';
-      $result = array('success' => false,'message' => $message);
+      $result = array('success' => 0,'message' => $message);
      } else {
 
      $this->Ff_user->save(array('Username'=>'','Phone_number'=>$phone_number,'Password'=>md5($password),
@@ -529,11 +538,11 @@ public function RegistCheck (){
      $res = $this->Ff_user->findById($this->Ff_user->id);
 
      if ($res) {
-     $result = array('success' => true,'message' => $message,'data'=>$res['Ff_user']);
+     $result = array('success' => 1,'message' => $message,'data'=>$res['Ff_user']);
      $this->Ff_msgcheck->save(array('id'=>$check['Id'],'status'=>2));
      } else {
      $message = '注册失败！(系统错误)';
-     $result = array('success' => false,'message' => $message);
+     $result = array('success' => 0,'message' => $message);
      }
     }
      $this->log($message);
@@ -542,7 +551,7 @@ public function RegistCheck (){
 
    }else{
      $this->log($message);
-     echo json_encode(array('success' => false,'message' => '验证码有误！'));
+     echo json_encode(array('success' => 0,'message' => '验证码有误！'));
      exit();
    }
 
@@ -573,13 +582,13 @@ public function RegistCheck (){
 
       if ($user) {
        $message = '此手机号已经注册！';
-       $result = array('success' => false,'message' => $message);
+       $result = array('success' => 0,'message' => $message);
       } else {
        $this->Ff_msgcheck->save(array('phone_number'=>$phoneNumber,'checkcode'=>$checkcode,
                                   'present_time'=>$present_time,'status'=>$status,'flag'=>$flag));
 
        $message = '申请成功！';
-       $result = array('success' => true,'message' => $message);
+       $result = array('success' => 1,'message' => $message);
 
    }
 
@@ -629,14 +638,14 @@ public function RegistCheck (){
 
       				if ($res) {
                 $message = '修改成功！';
-      					$result = array('success' => true,'message' => $message,'data' => $res['Ff_user']);
+      					$result = array('success' => 1,'message' => $message,'data' => $res['Ff_user']);
       				} else {
                 $message = '修改失败！';
-      					$result = array('success' => false,'message' => $message);
+      					$result = array('success' => 0,'message' => $message);
       				}
       			} else {
               $message = '该用户不存在！';
-              $result = array('success' => false,'message' => $message);
+              $result = array('success' => 0,'message' => $message);
             }
 
     }
@@ -656,14 +665,14 @@ public function RegistCheck (){
             $res = $this->Ff_user->findById($this->Ff_user->id);
             if ($res){
               $message = '修改成功！';
-              $result = array('success' => true,'message' => $message,'data' => $res['Ff_user']);
+              $result = array('success' => 1,'message' => $message,'data' => $res['Ff_user']);
             } else {
               $message = '密码修改失败！';
-              $result=array('success' => false,'message' => $message);
+              $result=array('success' => 0,'message' => $message);
             }
           } else {
             $message = '传入信息有误！';
-            $result = array('success' => false,'message' => $message);
+            $result = array('success' => 0,'message' => $message);
           }
 
     }
@@ -688,7 +697,7 @@ public function SendMsg(){
     array_push($a,$value['Ff_msgcheck']);
   }
 
-    echo json_encode(array('success' => true,'message' => '查询成功！','data' => $a));
+    echo json_encode(array('success' => 1,'message' => '查询成功！','data' => $a));
     $this->log('查询成功！');
     exit();
 
@@ -702,11 +711,58 @@ public function SendMsg(){
 
     $this->Ff_msgcheck->save(array('id'=>$msgid,'status'=>1));
 
-    echo json_encode(array('success' => true,'message' => '修改成功！'));
+    echo json_encode(array('success' => 1,'message' => '修改成功！'));
     $this->log('修改成功！');
     exit();
 
   }
+//保持登陆状态
+public function KeepLogin(){
+
+      $params = $this->request->query;
+      $message = '';
+
+      $user_id = $params['uid'];
+      $imei = $params['imei'];
+      $software_type = $params['soft'];
+      $type = $params['type'];
+      $present_time = time();
+
+      $user = $this->Ff_user->findById($user_id);
+
+
+      if(!$user){
+        $message = '验证失败！（传入用户不存在）';
+        $result = array('success' => 0,'message' => $message);
+
+      }else{
+
+        $user = $user['Ff_user'];
+
+        if($user['Status']==1){
+          $message = '验证成功！';
+          unset($user['Password']);
+          $result = array('success' => 1,'message' => $message,'data' => $user);
+          $this->Ff_loginrecord->save(array(
+             'user_id'=>$user_id,'software_type'=>$software_type,'type'=>$type,
+             'imei'=>$imei,'present_time'=>$present_time));
+        }else if($user['Status']==2){
+          $message = '验证失败！（用户封禁）';
+          $result = array('success' => 0,'message' => $message);
+        }else if($user['Status']==3){
+          $message = '验证失败！（用户抹除）';
+          $result = array('success' => 0,'message' => $message);
+        }else{
+          $message = '系统错误联系管理员！';
+          $result = array('success' => 0,'message' => $message);
+        }
+      }
+
+      $this->log($message);
+      echo json_encode($result);
+      exit();
+
+}
 
 
 
