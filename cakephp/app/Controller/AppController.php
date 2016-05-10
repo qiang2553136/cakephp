@@ -32,7 +32,9 @@ App::uses('Controller', 'Controller');
  */
 class AppController extends Controller {
 
-//输出日志
+/**
+输出日志
+*/
 public function log($msg)
 {
   $logName='log'.date('Ymd',time());
@@ -42,5 +44,49 @@ public function log($msg)
   ));
   parent::log($msg,$logName);
 }
+/**
+分页
+*/
+public function paging($model,$limit){
+
+  $count =  $this->$model->find('count');
+  $pagecount = $count/$limit;
+
+  $re = $this->$model->find('all');
+  /**
+  结果转化成数组
+  */
+  $k = array();
+  foreach ($re as $key => $value) {
+        $temp = array_merge($value[$model]);
+        array_push($k,$temp);
+      }
+
+  $result=array();
+  $pages = 0;
+  for ($i=0; $i < $pagecount; $i++) {
+  $output = array_slice($k, $limit*$i,$limit);
+  $pages = $i+1;
+  $result[$pages] = $output;
+  }
+  //记录总数
+  $result['count'] = $count;
+  //分页总数
+  $result['pages'] = $pages;
+
+  return $result;
+
+
+}
+
+// public function format($model){
+//   $k = array();
+//   foreach ($model as $key => $value) {
+//         $temp = array_merge($value[$model]);
+//         array_push($k,$temp);
+//       }
+//       return $k;
+// }
+
 
 }

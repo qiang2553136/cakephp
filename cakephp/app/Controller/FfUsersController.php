@@ -43,9 +43,37 @@ class FfUsersController extends AppController{
 
       if ($user) {
         $message = '登录成功！';
-        //不返回密码
+        /**
+        登陆返回前10条数据
+        */
+        $sql='select * from
+    (
+    select 0 action,store_price money,null score,purchases_time time,null text,null card
+    	from ff_purchases where user_id=27
+    	union all
+    select 1 action,consume_balance money,consume_score score,purchases_time time,product_name text,description card
+    	from ff_regists r left join ff_products f on r.product_id=f.id
+           left join ff_effectives e on r.effective_type=e.id
+    where user_id=27
+    	union all
+    select 2 action,null money,score,present_time time,description text,null card
+    	from ff_presents where user_id=27
+    ) x order by time desc limit 0,10;';
+        $result = $this->Ff_user->query($sql);
+        $k = array();
+        foreach ($result as $key => $value) {
+              $temp = array_merge($value['x']);
+              array_push($k,$temp);
+            }
+
+        /**
+        不返回密码
+        */
         unset($user['Ff_user']['Password']);
-        $result = array('success' => 1,'message' =>$message ,'data'=>$user['Ff_user']);
+
+        $result = array('success' => 1,'message' =>$message ,'data'=>$user['Ff_user'],
+                        'result' => $k
+                      );
        //保存登陆记录
        $user_id = $user['Ff_user']['Id'];
        $this->Ff_loginrecord->save(array(
@@ -491,6 +519,21 @@ public function RegistCheck (){
   //过期时间
   $overduedays = 1*60*60;
 
+  $imei ='';
+  $software_type = '';
+  $type = '';
+  if(array_key_exists('imei',$check)){
+      $imei = $params['imei'];
+  }
+  if(array_key_exists('soft',$check)){
+      $software_type = $params['soft'];
+  }
+  if(array_key_exists('type',$check)){
+      $type = $params['type'];
+  }
+  $present_time = time();
+
+
   $check = $this->Ff_msgcheck->find('first',array(
     'conditions' => array(
       'phone_number' => $phone_number,
@@ -538,8 +581,19 @@ public function RegistCheck (){
      $res = $this->Ff_user->findById($this->Ff_user->id);
 
      if ($res) {
+       /**
+       不返回密码
+      */
+     unset($res['Ff_user']['Password']);
+
      $result = array('success' => 1,'message' => $message,'data'=>$res['Ff_user']);
      $this->Ff_msgcheck->save(array('id'=>$check['Id'],'status'=>2));
+     //注册成功直接登陆，保存登陆信息
+     $user_id=$res['Ff_user']['Id'];
+     $this->Ff_loginrecord->save(array(
+        'user_id'=>$user_id,'software_type'=>$software_type,'type'=>$type,
+        'imei'=>$imei,'present_time'=>$present_time));
+
      } else {
      $message = '注册失败！(系统错误)';
      $result = array('success' => 0,'message' => $message);
@@ -719,7 +773,7 @@ public function SendMsg(){
 //保持登陆状态
 public function KeepLogin(){
 
-      $params = $this->request->query;
+      $params = $this->request->data;
       $message = '';
 
       $user_id = $params['uid'];
@@ -741,11 +795,42 @@ public function KeepLogin(){
 
         if($user['Status']==1){
           $message = '验证成功！';
+          /**
+          登陆返回前10条数据
+          */
+          $sql='select * from
+      (
+      select 0 action,store_price money,null score,purchases_time time,null text,null card
+      	from ff_purchases where user_id=27
+      	union all
+      select 1 action,consume_balance money,consume_score score,purchases_time time,product_name text,description card
+      	from ff_regists r left join ff_products f on r.product_id=f.id
+             left join ff_effectives e on r.effective_type=e.id
+      where user_id=27
+      	union all
+      select 2 action,null money,score,present_time time,description text,null card
+      	from ff_presents where user_id=27
+      ) x order by time desc limit 0,10;';
+          $result = $this->Ff_user->query($sql);
+          $k = array();
+          foreach ($result as $key => $value) {
+                $temp = array_merge($value['x']);
+                array_push($k,$temp);
+              }
+
+          /**
+          不返回密码
+          */
           unset($user['Password']);
-          $result = array('success' => 1,'message' => $message,'data' => $user);
+
+          $result = array('success' => 1,'message' =>$message ,'data'=>$user['Ff_user'],
+                          'result' => $k
+                        );
+         //保存登陆记录
           $this->Ff_loginrecord->save(array(
              'user_id'=>$user_id,'software_type'=>$software_type,'type'=>$type,
              'imei'=>$imei,'present_time'=>$present_time));
+
         }else if($user['Status']==2){
           $message = '验证失败！（用户封禁）';
           $result = array('success' => 0,'message' => $message);
@@ -761,6 +846,54 @@ public function KeepLogin(){
       $this->log($message);
       echo json_encode($result);
       exit();
+}
+
+public function RecordPage(){
+
+
+    $params = $this->request->data;
+    $page = $params['page'];
+    $limit = 2;
+
+    $sql='select * from
+(
+select 0 action,store_price money,null score,purchases_time time,null text,null card
+  from ff_purchases where user_id=27
+  union all
+select 1 action,consume_balance money,consume_score score,purchases_time time,product_name text,description card
+  from ff_regists r left join ff_products f on r.product_id=f.id
+       left join ff_effectives e on r.effective_type=e.id
+where user_id=27
+  union all
+select 2 action,null money,score,present_time time,description text,null card
+  from ff_presents where user_id=27
+) x order by time desc;';
+    $re = $this->Ff_user->query($sql);
+    $k = array();
+    foreach ($re as $key => $value) {
+          $temp = array_merge($value['x']);
+          array_push($k,$temp);
+        }
+
+    $pagecount = count($k)/$limit;
+
+    $temp=array();
+    $result=array();
+    $pages = 0;
+    for ($i=0; $i < $pagecount; $i++) {
+        $output = array_slice($k, $limit*$i,$limit);
+        $pages = $i+1;
+        $temp[$pages] = $output;
+    }
+
+    $result['data'] = $temp[$page];
+    //记录总数
+    $result['count'] = count($k);
+    //分页总数
+    $result['pages'] = $pages;
+
+    echo json_encode($result);
+    exit();
 
 }
 
