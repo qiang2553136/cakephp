@@ -516,20 +516,26 @@ public function RegistCheck (){
   $phone_number = $params['phone_number'];
   $password = $params['password'];
   $checkcode = $params['checkcode'];
+  $name = $params['phone_number'];
   //过期时间
   $overduedays = 1*60*60;
 
   $imei ='';
   $software_type = '';
   $type = '';
-  if(array_key_exists('imei',$check)){
+
+  if(array_key_exists('imei',$params)){
       $imei = $params['imei'];
   }
-  if(array_key_exists('soft',$check)){
+  if(array_key_exists('soft',$params)){
       $software_type = $params['soft'];
   }
-  if(array_key_exists('type',$check)){
+  if(array_key_exists('type',$params)){
       $type = $params['type'];
+  }
+  //待定字段
+  if(array_key_exists('name',$params)){
+      $name = $params['name'];
   }
   $present_time = time();
 
@@ -575,7 +581,8 @@ public function RegistCheck (){
       $result = array('success' => 0,'message' => $message);
      } else {
 
-     $this->Ff_user->save(array('Username'=>'','Phone_number'=>$phone_number,'Password'=>md5($password),
+     $this->Ff_user->save(array('Username'=>$name,
+     'Phone_number'=>$phone_number,'Password'=>md5($password),
      'Balance'=>0,'Score'=>0,'Status'=>1));
 
      $res = $this->Ff_user->findById($this->Ff_user->id);
@@ -776,7 +783,7 @@ public function KeepLogin(){
       $params = $this->request->data;
       $message = '';
 
-      $user_id = $params['uid'];
+      $user_id = $params['user_id'];
       $imei = $params['imei'];
       $software_type = $params['soft'];
       $type = $params['type'];
@@ -823,7 +830,7 @@ public function KeepLogin(){
           */
           unset($user['Password']);
 
-          $result = array('success' => 1,'message' =>$message ,'data'=>$user['Ff_user'],
+          $result = array('success' => 1,'message' =>$message ,'data'=>$user,
                           'result' => $k
                         );
          //保存登陆记录
@@ -847,13 +854,13 @@ public function KeepLogin(){
       echo json_encode($result);
       exit();
 }
-
+//用户余额变更记录分页（充值，消费）
 public function RecordPage(){
 
 
     $params = $this->request->data;
     $page = $params['page'];
-    $limit = 2;
+    $limit = 10;
 
     $sql='select * from
 (
@@ -891,6 +898,8 @@ select 2 action,null money,score,present_time time,description text,null card
     $result['count'] = count($k);
     //分页总数
     $result['pages'] = $pages;
+    //当前页数
+    $result['page'] = $page;
 
     echo json_encode($result);
     exit();
