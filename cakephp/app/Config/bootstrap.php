@@ -26,7 +26,6 @@
 Cache::config('default', array('engine' => 'File'));
 
 App::uses('AppError', 'Lib');
-App::uses('AppExceptionHandler', 'Lib');
 
 
 /**

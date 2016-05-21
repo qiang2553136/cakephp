@@ -59,8 +59,7 @@
 
 	Configure::write('Error.handler', 'AppError::handleError');
 
-	Configure::write('Exception.handler', 'AppExceptionHandler::handle');
-
+	
 
 
 /**

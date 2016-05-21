@@ -78,6 +78,59 @@ public function paging($model,$limit){
 
 
 }
+/**
+  向指定url提交post数据
+*/
+public function send_post($url, $post_data) {
+  //传入的数组转换为JSON格式
+  $postdata = json_encode($post_data);
+  $options = array(
+    'http' => array(
+      'method' => 'POST',
+      'header' => 'Content-type:application/x-www-form-urlencoded',
+      'content' => $postdata,
+      'timeout' => 15 * 60 // 超时时间（单位:s）
+    )
+  );
+  $context = stream_context_create($options);
+  $result = file_get_contents($url, false, $context);
+
+  return $result;
+}
+/**
+发送邮件
+*/
+public function send_email($name)
+    {
+        App::uses('CakeEmail','Network/Email');
+        $Email = new CakeEmail('gmail');
+        $Email->from(array('guozhiqiang@appfenfen.com' => '系统'))
+            ->to('403131588@qq.com')
+            ->subject('帐号异常')
+            ->send('帐号：'.$name.'余额出现异常，请及时处理！');
+    }
+/**
+  验签
+*/
+private function checkSign($arr,$key)
+    	{
+    		$sign=$arr['sign'];
+    		if(!$sign||strlen($sign)!=32)
+    			return false;
+    		unset($arr['sign']);
+    		ksort($arr);
+    		//$arr['key']=$key;
+    		$str='';
+    		foreach ($arr as $idx=>$value)
+    		{
+    			$str.=$idx.'='.$value.'&';
+    		}
+    		$str.='key='.$key;
+    		$rightSign=md5($str);
+    		$this->log($str.'=>'.$rightSign);
+    		return $rightSign==$sign;
+    	}
+
 
 // public function format($model){
 //   $k = array();
