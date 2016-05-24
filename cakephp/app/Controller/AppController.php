@@ -20,6 +20,8 @@
  */
 
 App::uses('Controller', 'Controller');
+App::uses('SharedMem', 'Lib');
+
 
 /**
  * Application Controller
@@ -113,12 +115,13 @@ public function send_email($name)
   验签
 */
 private function checkSign($arr,$key)
-    	{
+{
+
     		$sign=$arr['sign'];
     		if(!$sign||strlen($sign)!=32)
     			return false;
     		unset($arr['sign']);
-    		ksort($arr);
+    		ksort($arr);//排序
     		//$arr['key']=$key;
     		$str='';
     		foreach ($arr as $idx=>$value)
@@ -129,7 +132,52 @@ private function checkSign($arr,$key)
     		$rightSign=md5($str);
     		$this->log($str.'=>'.$rightSign);
     		return $rightSign==$sign;
-    	}
+}
+/**
+  获取app信息
+*/
+public function getAppInfo()
+	{
+		$params=$this->request->query;
+		if(!key_exists('client', $params)||!key_exists('sign', $params))
+		{
+			$this->log('缺少关键参数[client或sign]');
+			return false;
+		}
+		$app=SharedMem::getAppInfoById($params['client']);
+		if(!$app)
+		{
+			$this->log('当前应用client不存在');
+			return false;
+		}
+		if(!$this->checkSign($params, $app['key']))
+		{
+			$this->log('验证签名失败');
+			return false;
+		}
+
+		$this->log('验证签名成功');
+		return $app;
+	}
+/**
+  检查需要的参数是否存在
+*/
+public function checkParams($pa){
+    $params=$this->request->query;
+    $res = '';
+    foreach ($pa as $key => $value) {
+      if(!array_key_exists($value, $params)){
+        $res = $res.'缺少'.$value.'</br>';
+        $this->log('缺少'.$value);
+      }
+    }
+    if($res!=''){
+      echo $res;
+      exit();
+    }
+
+}
+
 
 
 // public function format($model){

@@ -29,5 +29,6 @@ App::uses('Model', 'Model');
  *
  * @package       app.Model
  */
-class Page extends AppModel {
+class Ff_app extends AppModel {
+   var $name = 'ff_app';
 }

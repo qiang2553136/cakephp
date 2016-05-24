@@ -11,6 +11,22 @@ class FfUsersController extends AppController{
     'Ff_effective','Ff_price','Ff_regist','Ff_score','Ff_present',
     'Ff_software','Ff_msgcheck','Ff_loginrecord','Ff_expiredtime');
 
+
+
+public function test(){
+  $params = $this->request->query;
+  //执行SQL语句
+  //  $sql = 'SELECT `Ff_score`.`type`,`Ff_score`.`description`,`Ff_score`.`id`,`Ff_score`.`type`, `Ff_score`.`days`, `Ff_score`.`score`, `Ff_score`.`software_type_value`
+  //  FROM `fenfen`.`ff_scores` AS `Ff_score`
+  //  WHERE software_type_value & 64 != 0
+  //  AND type = 1 ';
+  //  $rule = $this->Ff_score->query($sql);
+
+  $k = $this->getAppInfo();
+
+    echo json_encode($k);
+    exit();
+}
 //登陆
 public function Login() {
 
@@ -40,6 +56,17 @@ public function Login() {
              )
             );
       }
+
+
+
+      // $cs = $this->getAppInfo();
+      // if(!$cs){
+      //   $message = '验签失败';
+      //   $result = array('success' => 0,'message' => $message);
+      //   echo json_encode($result);
+      //   $this->log($this->request->here.$message);
+      // }
+
 
       if ($user) {
         $message = '登录成功！';
@@ -163,15 +190,16 @@ public function AppleProving(){
 //产品
   public function Products (){
 
-    $params = $this->request->data;
+    $params  = $this->request->data;
     $message = '';
 
     if($params['software_type']){
 
           $soft = $this->Ff_software->find('first',array(
-              'conditions' =>array(
-                'software_type'=>$params['software_type']
-              )
+              'conditions' =>
+              array(
+                  'software_type'=>$params['software_type']
+                  )
             ));
 
             $updatetime = 0;
@@ -186,7 +214,7 @@ public function AppleProving(){
             $user = $this->Ff_product->find('all',array(
               'conditions' => array(
                       'software_type_value' => $type_value,
-                      'update_time > ' => $updatetime
+                      'update_time > '      => $updatetime
                     )
                 )
                );
@@ -376,6 +404,23 @@ public function RegistProduct(){
   $productArray = array();
   $effective_time = time();
   $phoneNumber = $params['phone_number'];
+  $purchases_time = $params['purchases_time'];
+
+  /**
+  判断上传时间戳，如果相同返回对应的数据（防止重复注册）
+  */
+  $pt = $this->Ff_regist->find('first',array(
+    'conditions' => array(
+      'purchases_time' => $purchases_time
+          )
+  ));
+
+  if($pt){
+    $message = '购买成功！';
+    echo json_encode(array('success' => 1,'message' => $message,'data'=>$pt['Ff_regist']));
+    $this->log($this->request->here.$message);
+    exit();
+  }
 
   $res = $this->Ff_user->find('first',array(
     'conditions' => array(
@@ -400,30 +445,25 @@ public function RegistProduct(){
   		}
 
   $effRes = $this->Ff_effective->findById($params['effective_type']);
-  $days = $effRes['Ff_effective']['days'];
+  $days = $effRes['Ff_effective']['days'];//天数
+  $effprice = $effRes['Ff_effective']['price'];//
   $expire_time = $effective_time + $days*24*60*60;
   $effective_type = $params['effective_type'];
 
    $user = $this->Ff_user->findById($uid);
 
-    if($params['price']<0){
-      $message = '价格有误请联系管理员！';
-      echo json_encode(array('success' => 0,'message' => $message));
-      $this->log($this->request->here.$message);
-      exit();
-    }
 
           //如果积分足够先扣积分
-          if($user['Ff_user']['Score']-$params['price']>=0){
+          if($user['Ff_user']['Score']-$effprice>=0){
 
-            $user['Ff_user']['Score']=$user['Ff_user']['Score']-$params['price'];
+            $user['Ff_user']['Score']=$user['Ff_user']['Score']-$effprice;
 
             if ($this->Ff_user->save(array('id'=>$uid,'Score'=>$user['Ff_user']['Score']))) {
 
               $data = array('user_id'=>$uid,'product_id'=>$params['product_id'],
-                                    'purchases_time'=>time(),'valid_time'=>$effective_time,
+                                    'purchases_time'=>$purchases_time,'valid_time'=>$effective_time,
                                   'expire_time'=>$expire_time,'effective_type'=>$effective_type,
-                                'consume_score'=>$params['price'],'consume_balance'=>0);
+                                'consume_score'=>$effprice,'consume_balance'=>0);
               $r = $this->Ff_regist->save($data);
 
               //购买成功后保存到期时间
@@ -450,7 +490,7 @@ public function RegistProduct(){
             //积分不足扣除全部积分
             $consume_score=$user['Ff_user']['Score'];
 
-            $user['Ff_user']['Score']=$user['Ff_user']['Score']-$params['price'];
+            $user['Ff_user']['Score']=$user['Ff_user']['Score']-$effprice;
             $user['Ff_user']['Balance']=$user['Ff_user']['Balance']+$user['Ff_user']['Score'];
 
             $consume_balance=-$user['Ff_user']['Score'];
@@ -460,7 +500,7 @@ public function RegistProduct(){
               if ($this->Ff_user->save(array('id'=>$uid,'Balance'=>$user['Ff_user']['Balance'],'Score'=>0))) {
 
                 $data = array('user_id'=>$uid,'product_id'=>$params['product_id'],
-                                      'purchases_time'=>time(),'valid_time'=>$effective_time,
+                                      'purchases_time'=>$purchases_time,'valid_time'=>$effective_time,
                                     'expire_time'=>$expire_time,'effective_type'=>$effective_type,
                                   'consume_score'=>$consume_score,'consume_balance'=>$consume_balance);
                 $r = $this->Ff_regist->save($data);
@@ -503,33 +543,29 @@ public function RegistProduct(){
 }
 
 //赠送积分私有接口
-private function PresentScore(){
+public function PresentScore(){
 
-     $params = $this->request->query;
+     $params = $this->request->data;
      $message = '';
-     $description = '';
      $phone_number = $params['phone_number'];
      $soft = $params['software_type'];
-     if(array_key_exists('description',$params)){
-       $description = $params['description'];
-     }
 
-     $time = time();
+     //当前日期时间戳（不含分秒）
+     $time = strtotime(date("Y-m-d",time()));
      $s=$this->Ff_software->find('first',array(
        'conditions' => array(
          'software_type' => $soft
        )
      ));
     //执行SQL语句
-     $sql = 'SELECT `Ff_score`.`id`,`Ff_score`.`type`, `Ff_score`.`days`, `Ff_score`.`score`, `Ff_score`.`software_type_value`
+     $sql = 'SELECT `Ff_score`.`type`,`Ff_score`.`description`,`Ff_score`.`id`,`Ff_score`.`type`, `Ff_score`.`days`, `Ff_score`.`score`, `Ff_score`.`software_type_value`
      FROM `fenfen`.`ff_scores` AS `Ff_score`
-     WHERE software_type_value & '.$s['Ff_software']['software_type_value'].' != 0';
+     WHERE software_type_value & '.$s['Ff_software']['software_type_value'].' != 0
+     AND type = '.$params['type'].' ';
 
      $rule = $this->Ff_score->query($sql);
 
-
-
-     if($rule[0]){
+     if(array_key_exists(0,$rule)){
        $rule = $rule[0];
      }else{
        $message = '软件类型不存在！';
@@ -558,20 +594,28 @@ private function PresentScore(){
 
         if($present){
           //操作过快会有BUG
-         if($time-$present['Ff_present']['present_time']>($ruletime*60*60*24)){
-
-           $this->Ff_present->save(array('user_id'=>$user['Id'],'present_time'=>$time,
-           'score'=>$rule['Ff_score']['score'],
-           'description'=>$rule['Ff_score']['description'],
-           'type'=>$rule['Ff_score']['type']
-         ));
+         if($time-$present['Ff_present']['present_time']>=($ruletime*60*60*24)){
+          //保存赠送积分历史
+           $this->Ff_present->save(array(
+           'user_id'        =>$user['Id'],
+           'present_time'   =>$time,
+           'score'          =>$rule['Ff_score']['score'],
+           'description'    =>$rule['Ff_score']['description'],
+           'type'           =>$rule['Ff_score']['type']
+          ));
 
            $user['Score'] = $user['Score']+$rule['Ff_score']['score'];
 
            $this->Ff_user->save(array('id'=>$user['Id'],'Score'=>$user['Score']));
 
            $message = '积分领取成功！';
-           echo json_encode(array('success' => 1,'message' => $message,'data'=>$user));
+           echo json_encode(array(
+           'success'     => 1,
+           'message'     => $message,
+           'data'        =>$user,
+           'score'       =>$rule['Ff_score']['score'],
+           'description' =>$rule['Ff_score']['description']
+          ));
 
          }else{
 
@@ -584,11 +628,14 @@ private function PresentScore(){
         exit();
 
        }else{
-         $this->Ff_present->save(array('user_id'=>$user['Id'],'present_time'=>$time,
-         'score'=>$rule['Ff_score']['score'],
-         'description'=>$rule['Ff_score']['description'],
-         'type'=>$rule['Ff_score']['type']
-       ));
+         //保存赠送积分历史
+         $this->Ff_present->save(array(
+           'user_id'      =>$user['Id'],
+           'present_time' =>$time,
+           'score'        =>$rule['Ff_score']['score'],
+           'description'  =>$rule['Ff_score']['description'],
+           'type'         =>$rule['Ff_score']['type']
+         ));
 
          $user = $this->Ff_user->findById($user['Id']);
 
@@ -599,8 +646,13 @@ private function PresentScore(){
          $this->Ff_user->save(array('id'=>$user['Id'],'Score'=>$user['Score']));
 
          $message = '积分领取成功！';
-         echo json_encode(array('success' => 1,'message' => $message,'data'=>$user));
-
+         echo json_encode(array(
+         'success'     => 1,
+         'message'     => $message,
+         'data'        =>$user,
+         'score'       =>$rule['Ff_score']['score'],
+         'description' =>$rule['Ff_score']['description']
+        ));
        }
 
        $this->log($this->request->here.$message);
@@ -934,7 +986,6 @@ public function KeepLogin(){
 //用户余额变更记录分页（充值，消费）
 public function RecordPage(){
 
-
     $params = $this->request->data;
     $page = $params['page'];
     $limit = 10;
@@ -978,10 +1029,66 @@ select 2 action,null money,score,present_time time,description text,null card
     //当前页数
     $result['page'] = $page;
 
+    $this->log($this->request->here);
     echo json_encode($result);
     exit();
 
 }
+
+public function ThirdPartyLogin(){
+
+  $params = $this->request->query;
+  $message = '';
+  $this->checkParams(array("id","type","nick"));
+
+  if(array_key_exists('phone', $params)){
+
+    $res = $this->Ff_user->save(array(
+      'Third_party_id'   => $params['id'],
+      'Third_party_type' => $params['type'],
+      'Nick'             => $params['nick'],
+      'Phone_number'     => $params['phone']
+
+    ));
+    $message = '登陆成功！';
+    $result = array('success' => 1,'message' => $message,'data' => $res['Ff_user']);
+
+      $this->log($this->request->here.$message);
+      echo json_encode($result);
+      exit();
+  }
+
+  $user = $this->Ff_user->find('first',array(
+    'conditions' => array(
+      'Third_party_id' => $params['id']
+    )
+  ));
+
+  if($user){
+      if($user['Ff_user']['Phone_number']!=''){
+        $message = '登陆成功！';
+        $result = array('success' => 1,'message' => $message,'data' => $user['Ff_user']);
+      }else{
+        $message = '未绑定手机号！';
+        $result = array('success' => 2,'message' => $message);
+      }
+  }else{
+    $res = $this->Ff_user->save(array(
+      'Third_party_id'   => $params['id'],
+      'Third_party_type' => $params['type'],
+      'Nick'             => $params['nick']
+
+    ));
+    $message = '登陆成功！';
+    $result = array('success' => 1,'message' => $message,'data' => $res['Ff_user']);
+
+  }
+
+  $this->log($this->request->here.$message);
+  echo json_encode($result);
+  exit();
+}
+
 
 
 
