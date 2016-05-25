@@ -26,8 +26,8 @@
 Cache::config('default', array('engine' => 'File'));
 
 App::uses('AppError', 'Lib');
-
-
+//跨域ajax
+header('Access-Control-Allow-Origin: *');
 /**
  * The settings below can be used to set additional paths to models, views and controllers.
  *

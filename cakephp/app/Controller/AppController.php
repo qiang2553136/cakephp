@@ -138,7 +138,7 @@ private function checkSign($arr,$key)
 */
 public function getAppInfo()
 	{
-		$params=$this->request->query;
+		$params=$this->request->data;
 		if(!key_exists('client', $params)||!key_exists('sign', $params))
 		{
 			$this->log('缺少关键参数[client或sign]');
@@ -163,12 +163,12 @@ public function getAppInfo()
   检查需要的参数是否存在
 */
 public function checkParams($pa){
-    $params=$this->request->query;
+    $params=$this->request->data;
     $res = '';
     foreach ($pa as $key => $value) {
       if(!array_key_exists($value, $params)){
         $res = $res.'缺少'.$value.'</br>';
-        $this->log('缺少'.$value);
+        $this->log($this->request->here.'缺少'.$value);
       }
     }
     if($res!=''){

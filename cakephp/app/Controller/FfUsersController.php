@@ -728,6 +728,45 @@ public function RegistCheck (){
              )
          ));
 
+
+         //注册时查询是否有分享记录
+         $Score = 0;
+         $result=ClassRegistry::init(array(
+           'class' => 'ff_sharescores', 'alias' => 'sharescores'));
+         $r = $result->find('first',array(
+           'conditions' => array(
+             'phone_number' => $phone_number
+           )
+         ));
+
+         if($r){
+           //领取分享赠送的10积分
+           $Score = $r['sharescores']['score'];
+           //查询score表对应的数据type表示类型 8（您的朋友已使用优惠卷）
+           $k = $this->Ff_score->find('first',array(
+             'conditions' => array(
+               'type' => 8
+             )
+           ));
+           //增加分享者的积分
+           $this->Ff_user->id = $r['sharescores']['senter_user_id'];
+           $post = $this->Ff_user->read();  //读取数据
+           $this->Ff_user->saveField('Score', $post['Ff_user']['Score']+$k['Ff_score']['score']); //更新数据
+           //赠送成功后保存赠送记录
+           $this->Ff_present->save(array(
+             'user_id'      =>$post['Id'],
+             'present_time' =>time(),
+             'score'        =>$Score,
+             'description'  =>'成功领取优惠卷！',
+             'type'         =>9
+           ));
+           //使用完清空id
+           $this->Ff_user->clear();
+         }
+
+
+
+
      if ($user) {
       $message = '此手机号已存在！';
       $result = array('success' => 0,'message' => $message);
@@ -735,7 +774,7 @@ public function RegistCheck (){
 
      $this->Ff_user->save(array('Username'=>$name,
      'Phone_number'=>$phone_number,'Password'=>md5($password),
-     'Balance'=>0,'Score'=>0,'Status'=>1));
+     'Balance'=>0,'Score'=>$Score,'Status'=>1));
 
      $res = $this->Ff_user->findById($this->Ff_user->id);
 
@@ -987,21 +1026,35 @@ public function KeepLogin(){
 public function RecordPage(){
 
     $params = $this->request->data;
+
+    $this->checkParams(array("page","phone"));
     $page = $params['page'];
+    $phone_number = $params['phone'];
     $limit = 10;
+
+    $res = $this->Ff_user->find('first',array(
+      'conditions' => array(
+        'Phone_number' => $phone_number
+            )
+    ));
+
+
+    $uid = $res['Ff_user']['Id'];
+
+
 
     $sql='select * from
 (
 select 0 action,store_price money,null score,purchases_time time,null text,null card
-  from ff_purchases where user_id=27
+  from ff_purchases where user_id='.$uid.'
   union all
 select 1 action,consume_balance money,consume_score score,purchases_time time,product_name text,description card
   from ff_regists r left join ff_products f on r.product_id=f.id
        left join ff_effectives e on r.effective_type=e.id
-where user_id=27
+where user_id='.$uid.'
   union all
 select 2 action,null money,score,present_time time,description text,null card
-  from ff_presents where user_id=27
+  from ff_presents where user_id='.$uid.'
 ) x order by time desc;';
     $re = $this->Ff_user->query($sql);
     $k = array();
@@ -1041,23 +1094,47 @@ public function ThirdPartyLogin(){
   $message = '';
   $this->checkParams(array("id","type","nick"));
 
+  //判断是否传入电话号
   if(array_key_exists('phone', $params)){
 
-    $res = $this->Ff_user->save(array(
-      'Third_party_id'   => $params['id'],
-      'Third_party_type' => $params['type'],
-      'Nick'             => $params['nick'],
-      'Phone_number'     => $params['phone']
-
+    $u = $this->Ff_user->find('first',array(
+      'conditions' => array(
+        'Third_party_id' => $params['id']
+      )
     ));
-    $message = '登陆成功！';
-    $result = array('success' => 1,'message' => $message,'data' => $res['Ff_user']);
+    //判断是否有第3方登陆记录
+    if($u){
+        //如果有绑定手机号
+       $this->Ff_user->save(array(
+         'Id'           => $u['Ff_user']['Id'],
+         'Phone_number' => $params['phone']
+       ));
+      $res = $this->Ff_user->findById($this->Ff_user->id);
+      $message = '登陆成功！';
+      $result = array('success' => 1,'message' => $message,'data' => $res['Ff_user']);
 
       $this->log($this->request->here.$message);
       echo json_encode($result);
       exit();
-  }
+    }else{
+      //如果没有新增user
+      $res = $this->Ff_user->save(array(
+        'Third_party_id'   => $params['id'],
+        'Third_party_type' => $params['type'],
+        'Nick'             => $params['nick'],
+        'Phone_number'     => $params['type'].$params['phone']
 
+      ));
+      $message = '登陆成功！';
+      $result = array('success' => 1,'message' => $message,'data' => $res['Ff_user']);
+
+      $this->log($this->request->here.$message);
+      echo json_encode($result);
+      exit();
+    }
+
+  }
+  //查询没有传入手机号的记录
   $user = $this->Ff_user->find('first',array(
     'conditions' => array(
       'Third_party_id' => $params['id']
@@ -1065,7 +1142,9 @@ public function ThirdPartyLogin(){
   ));
 
   if($user){
+    //如果有判断手机号是否存在
       if($user['Ff_user']['Phone_number']!=''){
+        //如果有返回user记录
         $message = '登陆成功！';
         $result = array('success' => 1,'message' => $message,'data' => $user['Ff_user']);
       }else{
@@ -1073,20 +1152,54 @@ public function ThirdPartyLogin(){
         $result = array('success' => 2,'message' => $message);
       }
   }else{
+    //如果没有新增user记录返回未绑定手机号状态
     $res = $this->Ff_user->save(array(
       'Third_party_id'   => $params['id'],
       'Third_party_type' => $params['type'],
       'Nick'             => $params['nick']
 
     ));
-    $message = '登陆成功！';
-    $result = array('success' => 1,'message' => $message,'data' => $res['Ff_user']);
-
+    $message = '未绑定手机号！';
+    $result = array('success' => 2,'message' => $message);
   }
 
   $this->log($this->request->here.$message);
   echo json_encode($result);
   exit();
+}
+public function Share(){
+
+  $params = $this->request->data;
+  $message = '';
+  $this->checkParams(array("id","phone"));
+
+  //查询score表对应的数据type表示类型 7（您赠送的优惠卷已被领取）
+  $score = $this->Ff_score->find('first',array(
+    'conditions' => array(
+      'type' => 7
+    )
+  ));
+
+  //生成分享记录
+  $result=ClassRegistry::init(array(
+    'class' => 'ff_sharescores', 'alias' => 'sharescores'));
+  $r = $result->save(array(
+      'senter_user_id'  =>$params['id'],
+      'phone_number'    =>$params['phone'],
+      'share_time'      =>time(),
+      'score'           =>10
+   ));
+
+   //增加分享者的积分
+   $this->Ff_user->id = $params['id'];
+   $post = $this->Ff_user->read();  //读取数据
+   $this->Ff_user->saveField('Score', $post['Ff_user']['Score']+$score['Ff_score']['score']); //更新数据
+
+   $message = '积分领取成功！';
+   $this->log($this->request->here.$message);
+   echo json_encode(array('success' => 1,'message' => $message));
+   exit();
+
 }
 
 
