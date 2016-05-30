@@ -12,27 +12,21 @@ class FfUsersController extends AppController{
     'Ff_software','Ff_msgcheck','Ff_loginrecord','Ff_expiredtime');
 
 
-
 public function test(){
   $params = $this->request->query;
-  //执行SQL语句
-  //  $sql = 'SELECT `Ff_score`.`type`,`Ff_score`.`description`,`Ff_score`.`id`,`Ff_score`.`type`, `Ff_score`.`days`, `Ff_score`.`score`, `Ff_score`.`software_type_value`
-  //  FROM `fenfen`.`ff_scores` AS `Ff_score`
-  //  WHERE software_type_value & 64 != 0
-  //  AND type = 1 ';
-  //  $rule = $this->Ff_score->query($sql);
 
-  $k = $this->getAppInfo();
+  $k = Router::url();
 
-    echo json_encode($k);
-    exit();
+
+  echo $k;
+  exit();
 }
 //登陆
 public function Login() {
 
       $params = $this->request->data;
       $message = '';
-
+      $this->checkParams(array("username",'password','imei','soft','type'));
       $imei = $params['imei'];
       $software_type = $params['soft'];
       $type = $params['type'];
@@ -56,17 +50,6 @@ public function Login() {
              )
             );
       }
-
-
-
-      // $cs = $this->getAppInfo();
-      // if(!$cs){
-      //   $message = '验签失败';
-      //   $result = array('success' => 0,'message' => $message);
-      //   echo json_encode($result);
-      //   $this->log($this->request->here.$message);
-      // }
-
 
       if ($user) {
         $message = '登录成功！';
@@ -102,6 +85,7 @@ public function AppleProving(){
   //60832983e2af11e5a078001c42cf77c3  验签key
   $params = $this->request->data;
   // $receipt = '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';
+  $this->checkParams(array("receipt",'uid','balance','quantity','transaction_Identifier','purchases_time'));
   $receipt = $params['receipt'];
   $uid = $params['uid'];
   $message = '';
@@ -112,6 +96,9 @@ public function AppleProving(){
 
   $k = json_decode($res,true);
 
+  if(!$k){
+    $this->stopProgram(array('success' => 0,'message' => '苹果验证未通过！'));
+  }
   // $balance = $k['receipt']['in_app'][0]['product_id'];
   // $quantity = $k['receipt']['in_app'][0]['quantity'];
   // $transaction_Identifier = $k['receipt']['in_app'][0]['transaction_id'];
@@ -136,6 +123,9 @@ public function AppleProving(){
   //增加用户余额
   $this->Ff_user->id = $uid;
   $post = $this->Ff_user->read();  //读取数据
+  if(!$post){
+    $this->stopProgram(array('success' => 0,'message' => '用户不存在！'));
+  }
   $this->Ff_user->saveField('Balance', $post['Ff_user']['Balance']+$balance*$quantity); //更新数据
 
   //取出字符串中的数字
@@ -156,6 +146,9 @@ public function AppleProving(){
         //成功后更改purchase数据状态
         $this->Ff_purchase->id = $purchaseid;
         $post = $this->Ff_purchase->read();
+        if(!$post){
+          $this->stopProgram(array('success' => 0,'message' => '用户不存在！'));
+        }
         $this->Ff_purchase->saveField('state', 1); //更新数据
 
         $message='充值成功';
@@ -165,9 +158,15 @@ public function AppleProving(){
       //失败后扣除用户余额，用户余额出现负数发出邮件通知
       $this->Ff_user->id = $uid;
       $post = $this->Ff_user->read();  //读取数据
+      if(!$post){
+        $this->stopProgram(array('success' => 0,'message' => '用户不存在！'));
+      }
       $this->Ff_user->saveField('Balance', $post['Ff_user']['Balance']-$balance*$quantity); //更新数据
       $this->Ff_user->id = $uid;
       $balance = $this->Ff_user->read();
+      if(!$balance){
+        $this->stopProgram(array('success' => 0,'message' => '用户不存在！'));
+      }
       //帐号异常后发送邮件
       if($balance['Ff_user']['Balance']<0){
         $this->send_email($balance['Ff_user']['Username']);
@@ -176,10 +175,13 @@ public function AppleProving(){
       //失败后更改purchase数据状态
       $this->Ff_purchase->id = $purchaseid;
       $post = $this->Ff_purchase->read();
+      if(!$post){
+        $this->stopProgram(array('success' => 0,'message' => '用户不存在！'));
+      }
       $this->Ff_purchase->saveField('state', $state); //更新数据
 
       $message='充值失败！';
-      echo json_encode (array('success' => 0,'message' => $message));
+      echo json_encode(array('success' => 0,'message' => $message));
     }
 
     $this->log($this->request->here.$message);
@@ -192,15 +194,18 @@ public function AppleProving(){
 
     $params  = $this->request->data;
     $message = '';
+    $this->checkParams(array("soft"));
 
-    if($params['software_type']){
+    if($params['soft']){
 
           $soft = $this->Ff_software->find('first',array(
-              'conditions' =>
-              array(
-                  'software_type'=>$params['software_type']
+              'conditions'    =>array(
+                  'software_type' =>$params['soft']
                   )
             ));
+            if(count($soft)==0){
+              $this->stopProgram(array('success' => 0,'message' => '软件类型不存在！'));
+            }
 
             $updatetime = 0;
             if(array_key_exists('updatetime',$params)){
@@ -219,7 +224,9 @@ public function AppleProving(){
                 )
                );
 
-
+        if(count($user)==0){
+          $this->stopProgram(array('success' => 0,'message' => '数据不存在！'));
+        }
         foreach ($user as $key => $value) {
 
 				$products = $value['Ff_product'];
@@ -233,7 +240,9 @@ public function AppleProving(){
                 )
             )
            );
-
+           if(count($res)==0){
+             $this->stopProgram(array('success' => 0,'message' => '数据不存在！'));
+           }
           $priceArray = array();
 
           foreach ($res as $k => $v) {
@@ -270,68 +279,20 @@ public function AppleProving(){
       exit();
 
   }
-
-//充值
-// public function Purchases(){
-//       $params = $this->request->data;
-//       $message = '';
-//
-//       $phoneNumber = $params['phone_number'];
-//   		$purchases_time = time();
-//   		$store_price = $params['store_price'];
-//   		$transaction_Identifier = $params['transaction_Identifier'];
-//   		$local = $params['local'];
-//
-//   	   $data = array('user_id'=>$uid,'purchases_time'=>$purchases_time,
-//                   'store_price'=>$store_price,'transaction_Identifier'=>$transaction_Identifier,
-//                   'local'=>$local);
-//
-//   		if ($this->Ff_purchase->save($data)) {
-//
-//           $res = $this->Ff_user->find('first',array(
-//             'conditions' => array(
-//               'Phone_number' => $phoneNumber
-//                   )
-//           ));
-//
-//         $r = $this->Ff_user->save(array('id'=>$res['Ff_user']['Id'],'Balance'=>$res['Ff_user']['Balance']+$store_price));
-//
-//   			if ($r) {
-//           $message = '充值成功！';
-//   				echo json_encode (array('success' => 1,'message' => $message ));
-//
-//   			} else {
-//           $message = '充值失败！';
-//   				echo json_encode (array('success' => 0,'message' => $message));
-//
-//   			}
-//         $this->log($this->request->here.$message);
-//         exit();
-//
-//   		} else {
-//         $message = '充值失败！(系统错误)';
-//   			echo json_encode (array('success' => 0,'message' => $message));
-//
-//
-//   		}
-//
-//       $this->log($this->request->here.$message);
-//       exit();
-//
-//
-// }
-
 //GetProductPriceById
 public function Price(){
 
   $params = $this->request->data;
   $message = '';
+  $this->checkParams(array("product_id"));
 
   $productArray = array();
 
   if ($params['product_id']) {
   			$res = $this->Ff_price->query("SELECT * FROM `ff_prices` AS `p` LEFT JOIN `ff_effectives` AS `e` ON `p`.effective_id=`e`.id WHERE  `p`.product_id = ".$params['product_id']);
-
+        if(count($res)==0){
+          $this->stopProgram(array('success' => 0,'message' => '数据不存在！'));
+        }
         foreach ($res as $key => $value) {
           $temp = array_merge($value['p'],$value['e']);
           $temp['price_id'] = $value['p']['Id'];
@@ -354,9 +315,9 @@ public function Price(){
 }
 //UserProducts
 public function UserProducts(){
-  $params = $this->request->data;
-  $message = '';
-
+    $params = $this->request->data;
+    $message = '';
+    $this->checkParams(array("phone_number"));
     $productArray=array();
 
     $phoneNumber = $params['phone_number'];
@@ -365,6 +326,9 @@ public function UserProducts(){
         'Phone_number' => $phoneNumber
             )
     ));
+    if($res){
+        $this->stopProgram(array('success' => 0,'message' => '用户不存在！'));
+    }
 
     $uid = $res['Ff_user']['Id'];
 
@@ -373,6 +337,9 @@ public function UserProducts(){
             'user_id' => $uid
                 )
         ));
+    if(count($re)==0){
+      $this->stopProgram(array('success' => 0,'message' => '数据不存在！'));
+    }
 
     foreach ($re as $key => $value) {
           $temp = array_merge($value['Ff_expiredtime']);
@@ -385,7 +352,7 @@ public function UserProducts(){
           echo json_encode(array('success' => 1,'message' => $message,'data'=>$productArray));
         }else{
           $message = '查询失败，没有找到相关信息！';
-          echo json_encode(array('success' => 1,'message' => $message));
+          echo json_encode(array('success' => 0,'message' => $message));
         }
 
         $this->log($this->request->here.$message);
@@ -400,7 +367,8 @@ public function RegistProduct(){
 
   $params = $this->request->data;
   $message = '';
-
+  $this->checkParams(array("phone_number",'purchases_time','product_id','effective_type'));
+  $this->getAppInfo();
   $productArray = array();
   $effective_time = time();
   $phoneNumber = $params['phone_number'];
@@ -428,8 +396,11 @@ public function RegistProduct(){
           )
   ));
 
-  $uid = $res['Ff_user']['Id'];
+  if(!$res){
+    $this->stopProgram(array('success' => 0,'message' => '用户不存在！'));
+  }
 
+  $uid = $res['Ff_user']['Id'];
 
   $res = $this->Ff_regist->query("SELECT * FROM `ff_regists` `r` LEFT JOIN `ff_effectives` `e` ON `e`.id = `r`.effective_type WHERE `r`.user_id=".
   $uid." AND `r`.product_id=".$params['product_id']." ORDER BY `r`.valid_time DESC");
@@ -445,13 +416,29 @@ public function RegistProduct(){
   		}
 
   $effRes = $this->Ff_effective->findById($params['effective_type']);
+  if(!$effRes){
+    $this->stopProgram(array('success' => 0,'message' => '卡类型不存在！'));
+  }
   $days = $effRes['Ff_effective']['days'];//天数
-  $effprice = $effRes['Ff_effective']['price'];//
+
+  $price = $this->Ff_price->find('first',array(
+    'conditions' => array(
+      'product_id'   => $params['product_id'],
+      'effective_id' => $params['effective_type']
+          )
+  ));
+  if(!$price){
+    $this->stopProgram(array('success' => 0,'message' => '该科目未配置对应的卡类型！'));
+  }
+  $effprice = $price['Ff_price']['product_price'];//科目价格
   $expire_time = $effective_time + $days*24*60*60;
   $effective_type = $params['effective_type'];
 
    $user = $this->Ff_user->findById($uid);
 
+   if(!$user){
+     $this->stopProgram(array('success' => 0,'message' => '用户不存在！'));
+   }
 
           //如果积分足够先扣积分
           if($user['Ff_user']['Score']-$effprice>=0){
@@ -547,8 +534,9 @@ public function PresentScore(){
 
      $params = $this->request->data;
      $message = '';
+     $this->checkParams(array("phone_number",'softe'));
      $phone_number = $params['phone_number'];
-     $soft = $params['software_type'];
+     $soft = $params['soft'];
 
      //当前日期时间戳（不含分秒）
      $time = strtotime(date("Y-m-d",time()));
@@ -557,6 +545,9 @@ public function PresentScore(){
          'software_type' => $soft
        )
      ));
+     if(!$s){
+       $this->stopProgram(array('success' => 0,'message' =>'软件类型不存在！'));
+     }
     //执行SQL语句
      $sql = 'SELECT `Ff_score`.`type`,`Ff_score`.`description`,`Ff_score`.`id`,`Ff_score`.`type`, `Ff_score`.`days`, `Ff_score`.`score`, `Ff_score`.`software_type_value`
      FROM `fenfen`.`ff_scores` AS `Ff_score`
@@ -580,6 +571,9 @@ public function PresentScore(){
               'Phone_number' => $phone_number
             )
         ));
+    if(!$user){
+      $this->stopProgram(array('success' => 0,'message' =>'用户不存在！'));
+    }
 
      $user = $user['Ff_user'];
 
@@ -638,6 +632,9 @@ public function PresentScore(){
          ));
 
          $user = $this->Ff_user->findById($user['Id']);
+         if(!$user){
+           $this->stopProgram(array('success' => 0,'message' =>'用户不存在！'));
+         }
 
          $user = $user['Ff_user'];
 
@@ -665,6 +662,7 @@ public function RegistCheck (){
   $params = $this->request->data;
   $message = '';
 
+  $this->checkParams(array("phone_number",'password','checkcode'));
   $phone_number = $params['phone_number'];
   $password = $params['password'];
   $checkcode = $params['checkcode'];
@@ -728,7 +726,6 @@ public function RegistCheck (){
              )
          ));
 
-
          //注册时查询是否有分享记录
          $Score = 0;
          $result=ClassRegistry::init(array(
@@ -748,9 +745,15 @@ public function RegistCheck (){
                'type' => 8
              )
            ));
+           if(!$k){
+             $this->stopProgram(array('success' => 0,'message' =>'积分类型不存在!'));
+           }
            //增加分享者的积分
            $this->Ff_user->id = $r['sharescores']['senter_user_id'];
            $post = $this->Ff_user->read();  //读取数据
+           if(!$post){
+             $this->stopProgram(array('success' => 0,'message' =>'用户不存在!'));
+           }
            $this->Ff_user->saveField('Score', $post['Ff_user']['Score']+$k['Ff_score']['score']); //更新数据
            //赠送成功后保存赠送记录
            $this->Ff_present->save(array(
@@ -763,9 +766,6 @@ public function RegistCheck (){
            //使用完清空id
            $this->Ff_user->clear();
          }
-
-
-
 
      if ($user) {
       $message = '此手机号已存在！';
@@ -816,7 +816,7 @@ public function RegistCheck (){
 
       $params = $this->request->data;
       $message = '';
-
+      $this->checkParams(array("phone_number",'flag'));
       $phoneNumber = $params['phone_number'];
       $flag = $params['flag'];
       $status = 0;
@@ -844,9 +844,7 @@ public function RegistCheck (){
 
    }
 
-  $this->log($this->request->here.$message);
-  echo json_encode($result);
-  exit();
+  $this->stopProgram($result);
 
 }
 
@@ -860,6 +858,7 @@ public function RegistCheck (){
     $newpwd = '';
     $name = '';
     $phoneNumber = $params['phone_number'];
+    $this->checkParams(array("phone_number"));
 
   if(array_key_exists('oldpwd',$params)){
       $oldpwd = $params['oldpwd'];
@@ -928,9 +927,7 @@ public function RegistCheck (){
           }
 
     }
-        $this->log($this->request->here.$message);
-        echo json_encode($result);
-        exit();
+        $this->stopProgram($result);
 
   }
   //发送短信
@@ -942,7 +939,9 @@ public function SendMsg(){
       ),
       'order' => array('Ff_msgcheck.present_time' => 'desc')
     ));
-
+    if(count($check)==0){
+      $this->stopProgram(array('success' => 0,'message' => '没有查到数据！'));
+    }
   $a=array();
 
   foreach ($check as $key => $value) {
@@ -959,6 +958,8 @@ public function SendMsg(){
 
     $params = $this->request->data;
 
+    $this->checkParams(array("msgid"));
+
     $msgid = $params['msgid'];
 
     $this->Ff_msgcheck->save(array('id'=>$msgid,'status'=>1));
@@ -973,6 +974,7 @@ public function KeepLogin(){
 
       $params = $this->request->data;
       $message = '';
+      $this->checkParams(array("user_id","imei",'soft','type'));
 
       $user_id = $params['user_id'];
       $imei = $params['imei'];
@@ -984,9 +986,7 @@ public function KeepLogin(){
 
 
       if(!$user){
-        $message = '验证失败！（传入用户不存在）';
-        $result = array('success' => 0,'message' => $message);
-
+        $this->stopProgram(array('success' => 0,'message' => '验证失败！（传入用户不存在）'));
       }else{
 
         $user = $user['Ff_user'];
@@ -999,8 +999,7 @@ public function KeepLogin(){
           */
           unset($user['Password']);
 
-          $result = array('success' => 1,'message' =>$message ,'data'=>$user
-                        );
+          $result = array('success' => 1,'message' =>$message ,'data'=>$user);
          //保存登陆记录
           $this->Ff_loginrecord->save(array(
              'user_id'=>$user_id,'software_type'=>$software_type,'type'=>$type,
@@ -1018,9 +1017,8 @@ public function KeepLogin(){
         }
       }
 
-      $this->log($this->request->here.$message);
-      echo json_encode($result);
-      exit();
+      $this->stopProgram($result);
+
 }
 //用户余额变更记录分页（充值，消费）
 public function RecordPage(){
@@ -1031,17 +1029,20 @@ public function RecordPage(){
     $page = $params['page'];
     $phone_number = $params['phone'];
     $limit = 10;
+    $result=array();
+    $result['success'] =0;
 
     $res = $this->Ff_user->find('first',array(
       'conditions' => array(
         'Phone_number' => $phone_number
             )
     ));
-
+    if(!$res){
+      $result['message'] ='用户不存在！';
+      $this->stopProgram($result);
+    }
 
     $uid = $res['Ff_user']['Id'];
-
-
 
     $sql='select * from
 (
@@ -1058,6 +1059,16 @@ select 2 action,null money,score,present_time time,description text,null card
 ) x order by time desc;';
     $re = $this->Ff_user->query($sql);
     $k = array();
+
+    if(count($re)==0){
+      $result['success'] =1;
+      $result['message'] ='查询成功！没有对应的数据';
+      $result['data'] = array();
+      $result['count'] = 0;
+      $result['pages'] = 1;
+      $result['page'] = 0;
+      $this->stopProgram($result);
+    }
     foreach ($re as $key => $value) {
           $temp = array_merge($value['x']);
           array_push($k,$temp);
@@ -1066,32 +1077,34 @@ select 2 action,null money,score,present_time time,description text,null card
     $pagecount = count($k)/$limit;
 
     $temp=array();
-    $result=array();
     $pages = 0;
     for ($i=0; $i < $pagecount; $i++) {
         $output = array_slice($k, $limit*$i,$limit);
         $pages = $i+1;
         $temp[$pages] = $output;
     }
+      //查询成功
+      $result['success'] =1;
+      $result['message'] ='查询成功！';
+      //数据
+      $result['data'] = $temp[$page];
+      //记录总数
+      $result['count'] = count($k);
+      //分页总数
+      $result['pages'] = $pages;
+      //当前页数
+      $result['page'] = $page;
 
-    $result['data'] = $temp[$page];
-    //记录总数
-    $result['count'] = count($k);
-    //分页总数
-    $result['pages'] = $pages;
-    //当前页数
-    $result['page'] = $page;
-
-    $this->log($this->request->here);
-    echo json_encode($result);
-    exit();
+      //返回数据
+      $this->stopProgram($result);
 
 }
-
+//第3方登陆接口
 public function ThirdPartyLogin(){
 
   $params = $this->request->query;
   $message = '';
+  $result['success'] =0;
   $this->checkParams(array("id","type","nick"));
 
   //判断是否传入电话号
@@ -1113,9 +1126,7 @@ public function ThirdPartyLogin(){
       $message = '登陆成功！';
       $result = array('success' => 1,'message' => $message,'data' => $res['Ff_user']);
 
-      $this->log($this->request->here.$message);
-      echo json_encode($result);
-      exit();
+      $this->stopProgram($result);
     }else{
       //如果没有新增user
       $res = $this->Ff_user->save(array(
@@ -1123,14 +1134,11 @@ public function ThirdPartyLogin(){
         'Third_party_type' => $params['type'],
         'Nick'             => $params['nick'],
         'Phone_number'     => $params['type'].$params['phone']
-
       ));
       $message = '登陆成功！';
       $result = array('success' => 1,'message' => $message,'data' => $res['Ff_user']);
 
-      $this->log($this->request->here.$message);
-      echo json_encode($result);
-      exit();
+      $this->stopProgram($result);
     }
 
   }
@@ -1163,14 +1171,15 @@ public function ThirdPartyLogin(){
     $result = array('success' => 2,'message' => $message);
   }
 
-  $this->log($this->request->here.$message);
-  echo json_encode($result);
-  exit();
+    $this->stopProgram($result);
+
 }
+//分享share
 public function Share(){
 
   $params = $this->request->data;
   $message = '';
+  $result['success'] =0;
   $this->checkParams(array("id","phone"));
 
   //查询score表对应的数据type表示类型 7（您赠送的优惠卷已被领取）
@@ -1179,6 +1188,10 @@ public function Share(){
       'type' => 7
     )
   ));
+  if(!$score){
+    $result['message']='积分类型不存在！';
+    $this->stopProgram($result);
+  }
 
   //生成分享记录
   $result=ClassRegistry::init(array(
@@ -1193,12 +1206,14 @@ public function Share(){
    //增加分享者的积分
    $this->Ff_user->id = $params['id'];
    $post = $this->Ff_user->read();  //读取数据
+   if(!$post){
+     $result['message']='用户不存在！';
+     $this->stopProgram($result);
+   }
    $this->Ff_user->saveField('Score', $post['Ff_user']['Score']+$score['Ff_score']['score']); //更新数据
 
-   $message = '积分领取成功！';
-   $this->log($this->request->here.$message);
-   echo json_encode(array('success' => 1,'message' => $message));
-   exit();
+   $result['message']='积分领取成功！';
+   $this->stopProgram($result);
 
 }
 

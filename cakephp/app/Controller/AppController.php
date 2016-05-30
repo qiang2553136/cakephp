@@ -177,6 +177,19 @@ public function checkParams($pa){
     }
 
 }
+/**
+  输出json
+*/
+public function stopProgram($result){
+
+    //生成日志
+    $this->log($this->request->here.$result['message']);
+    //输出json
+    echo json_encode($result);
+    //停止向下执行
+    exit();
+
+}
 
 
 
