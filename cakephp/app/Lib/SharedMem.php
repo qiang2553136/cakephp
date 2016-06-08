@@ -15,7 +15,7 @@ class SharedMem{
 	//获取应用信息
 	public static function getAppInfoById($appId=null,$level=0)
 	{
-		$result = Cache::read('apps');
+		$result = Cache::read('apps','long');
 
 		if(!$result)
 		{
