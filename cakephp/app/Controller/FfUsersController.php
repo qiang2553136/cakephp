@@ -501,14 +501,22 @@ public function RegistCheck (){
     $check = $this->Ff_msgcheck->find('first',array(
         'conditions' => array(
             'phone_number' => $params['phone_number'],
-            'checkcode'=>$params['checkcode'],
             'status' =>1
         ),
         'order' => array('Ff_msgcheck.present_time' => 'desc')
     ));
 
     if(!$check){
-        $this->returnError('验证码有误，请重新申请！');
+        $this->returnError('未查到相关数据，请重新申请！');
+    }
+    if($check['Ff_msgcheck']['checkcode']!=$params['checkcode']){
+        if($check['Ff_msgcheck']['times']>3){
+            $this->returnError('连续输错3次，验证码失效，请重新申请！');
+        }
+        $this->Ff_msgcheck->id=$check['Ff_msgcheck']['id'];//设置id
+        $msgcheck = $this->Ff_msgcheck->read();//读取数据
+        $this->Ff_msgcheck->saveField('times', $msgcheck['Ff_msgcheck']['times']+1);//更新数据
+        $this->returnError('验证码错误！');
     }
     $check = $check['Ff_msgcheck'];
     if($check['flag']==0){
@@ -588,7 +596,10 @@ public function RegistCheck (){
                     )
         ));
     if(!$r){
-        $this->returnSucc($message,$this->Ff_user->findById($userData['Ff_user']['Id']));
+        $userData=$this->Ff_user->findById($userData['Ff_user']['Id']);
+        //不返回密码
+        unset($userData['Ff_user']['Password']);
+        $this->returnSucc($message,$userData['Ff_user']);
     }
     //领取分享赠送的10积分
     $Score = $r['sharescores']['score'];
@@ -672,8 +683,6 @@ public function Regist(){
 
     $params = $this->checkParams(array("phone_number"));
 
-    // $this->checkAppInfo($params);
-
     $oldpwd = '';
     $newpwd = '';
     $name = '';
@@ -689,10 +698,12 @@ public function Regist(){
     if(array_key_exists('nick',$params)){
         $name = $params['nick'];
     }
+
+
     $userData=$this->Ff_user->find('first',array(
       'conditions' => array(
         'Phone_number' => $params['phone_number']
-            )
+        )
     ));
     if(!$userData){
         $this->returnError('用户不存在！');
@@ -704,7 +715,7 @@ public function Regist(){
     if($name!=''){
 		$data=array('id'=>$userData['Ff_user']['Id'],'Nick'=>$name);
         $this->Ff_user->save($data);
-        $res = $this->Ff_user->findById($this->Ff_user->id);
+        $res = $this->Ff_user->findById($userData['Ff_user']['Id']);
         $this->Ff_user->clear();
         if(!$res){
             $this->returnError('修改失败！');
@@ -714,13 +725,39 @@ public function Regist(){
     if($newpwd!='' && $oldpwd!=''){
         $data=array('id'=>$userData['Ff_user']['Id'],'Password'=>md5($newpwd));
         $this->Ff_user->save($data);
-        $res = $this->Ff_user->findById($this->Ff_user->id);
+        $res = $this->Ff_user->findById($userData['Ff_user']['Id']);
         $this->Ff_user->clear();
         if(!$res){
             $this->returnError('修改失败！');
         }
     }
-
+    if(array_key_exists('username',$params)){
+        if(!$userData['Ff_user']['Phone_number']==$userData['Ff_user']['Username']){
+            $this->returnError('用户名只能修改一次！');
+        }
+        $username = $params['username'];
+        // 查找符合条件的用户
+        $user = $this->Ff_user->find('first',array(
+            'conditions' => array('OR' => array(
+                  'Phone_number' => $username,
+                  'Username' => $username
+                ))
+              )
+            );
+        if($user){
+            $this->returnError('用户名已存在！');
+        }
+        $data=array('id'=>$userData['Ff_user']['Id'],'Username'=>$username);
+        $this->Ff_user->save($data);
+        $res = $this->Ff_user->findById($userData['Ff_user']['Id']);
+        $this->Ff_user->clear();
+        if(!$res){
+            $this->returnError('修改失败！');
+        }
+    }
+    if(!$res){
+        $this->returnError('缺少关键参数！');
+    }
     $this->returnSucc('修改成功！',$res['Ff_user']);
 
   }
@@ -864,7 +901,7 @@ public function ThirdPartyLogin(){
             'Third_party_id'   => $params['id'],
             'Third_party_type' => $params['type'],
             'Nick'             => $params['nick'],
-            'Phone_number'     => $params['phone']
+            'Phone_number'     => $params['type'].$params['phone']
         ));
         //注册成功赠送10积分
         $scoreData = $this->Ff_score->find('first',array(

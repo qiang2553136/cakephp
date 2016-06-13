@@ -14,10 +14,10 @@ public function SendMsg(){
         ),
         'order' => array('Ff_msgcheck.present_time' => 'desc')
     ));
-    if(count($check)==0){
-        $this->returnError('没有查到数据！');
-    }
     $data=array();
+    if(count($check)==0){
+        $this->returnSucc('没有查到数据！',$data);
+    }
     foreach ($check as $key => $value) {
         array_push($data,$value['Ff_msgcheck']);
     }

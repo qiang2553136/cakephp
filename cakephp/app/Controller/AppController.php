@@ -35,7 +35,7 @@ class AppController extends Controller {
 /**
 输出日志
 */
-public function log($msg) {
+public function logs($msg) {
     $logName='log'.date('Ymd',time());
     CakeLog::config($logName, array(
         'engine' => 'File',
@@ -90,6 +90,9 @@ public function send_post($url, $post_data) {
         )
     );
     $context = stream_context_create($options);
+    if(!$context){
+        $this->returnError('网络错误！');
+    }
     $result = file_get_contents($url, false, $context);
     return $result;
 }
@@ -160,7 +163,7 @@ public function checkParams($params) {
 */
 public function returnError($message) {
     echo json_encode(array('success' => 0,'message' => $message));
-    $this->log($this->request->here.$message);
+    $this->logs($this->request->here.$message);
  exit();
 }
 /**
@@ -168,7 +171,7 @@ public function returnError($message) {
 */
 public function returnSucc($message, $data) {
     echo json_encode(array('success' => 1,'message' => $message, 'data' => $data));
-    $this->log($this->request->here.$message);
+    $this->logs($this->request->here.$message);
     exit();
 }
 
