@@ -150,6 +150,9 @@ public function checkAppInfo($params) {
 */
 public function checkParams($params) {
     $datas = $this->request->data;
+    if (count($datas) == 0) {
+        $datas = $this->request->query;
+    }
     foreach ($params as $key => $value) {
         if (!array_key_exists($value, $datas) || count($datas[$value]) == 0) {
             echo json_encode(array('success' => 0,'message' => '缺少必要参数:'.$value));

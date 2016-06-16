@@ -17,14 +17,6 @@ public $uses = array('Ff_user','Ff_purchase','Ff_product',
 public function test() {
     // $k = $this->Ff_expiredtime->query($sql);
 
-    $k =$this->Ff_user->find('first',array(
-        'conditions' =>  array('OR' => array(
-              'Phone_number' => 18684328731,
-              'username' => 18684328731
-            ))
-        ));
-    echo json_encode($k);
-    EXIT();
     // $this->returnSucc('1',$k);
 }
 //登陆
@@ -236,14 +228,14 @@ public function Price(){
 //用户科目
 public function UserProducts(){
 
-    $params = $this->checkParams(array("phone_number"));
+    $params = $this->checkParams(array("phone"));
     $this->checkAppInfo($params);
 
     $productArray = array();
 
     $userData = $this->Ff_user->find('first',array(
                 'conditions' => array(
-                    'Phone_number' => $params['phone_number']
+                    'Phone_number' => $params['phone']
                     )
                 ));
 
@@ -259,7 +251,7 @@ public function UserProducts(){
             )
         ));
     if(count($re)==0){
-        $this->returnError('数据不存在！');
+        $this->returnSucc('查询成功！',array());
     }
 
     foreach ($re as $key => $value) {
@@ -274,7 +266,7 @@ public function UserProducts(){
 //注册科目
 public function RegistProduct(){
 
-    $params = $this->checkParams(array("phone_number",'purchases_time','product_id','effective_type'));
+    $params = $this->checkParams(array("phone",'purchases_time','product_id','effective_type'));
     $this->checkAppInfo($params);
 
     $productArray   = array();
@@ -298,7 +290,7 @@ public function RegistProduct(){
 
     $userData = $this->Ff_user->find('first',array(
         'conditions' => array(
-          'Phone_number' => $params['phone_number']
+          'Phone_number' => $params['phone']
         )
     ));
 
@@ -391,7 +383,7 @@ public function RegistProduct(){
 //赠送积分私有接口
 public function PresentScore() {
 
-    $params = $this->checkParams(array("phone_number",'soft','type'));
+    $params = $this->checkParams(array("phone",'soft','type'));
     // $this->checkAppInfo($params);
 
     $now = time();
@@ -408,7 +400,7 @@ public function PresentScore() {
     }
 
     $user = $this->Ff_user->find('first',array(
-            'conditions' => array('Phone_number' => $params['phone_number'])
+            'conditions' => array('Phone_number' => $params['phone'])
         ));
     if(!$user){
         $this->returnError('用户不存在！');
@@ -416,7 +408,7 @@ public function PresentScore() {
     $user = $user['Ff_user'];
 
     $sql = 'SELECT`Ff_score`.`times`, `Ff_score`.`type`,`Ff_score`.`description`,`Ff_score`.`id`,`Ff_score`.`type`, `Ff_score`.`days`, `Ff_score`.`score`, `Ff_score`.`software_type_value`
-    FROM `fenfen`.`ff_scores` AS `Ff_score`
+    FROM `ff_scores` AS `Ff_score`
     WHERE software_type_value & '.$value['Ff_software']['software_type_value'].' != 0
     AND type = '.$params['type'].' ';
 
@@ -476,7 +468,7 @@ public function RegistCheck (){
     $params = $this->checkParams(array("phone_number",'password','checkcode'));
     $this->checkAppInfo($params);
     //用户名默认是手机号
-    $name = $params['phone_number'];
+    $name = $params['phone'];
     $imei ='';
     $software_type = '';
     $type = '';
@@ -500,23 +492,28 @@ public function RegistCheck (){
 
     $check = $this->Ff_msgcheck->find('first',array(
         'conditions' => array(
-            'phone_number' => $params['phone_number'],
+            'phone_number' => $params['phone'],
             'status' =>1
         ),
         'order' => array('Ff_msgcheck.present_time' => 'desc')
     ));
 
     if(!$check){
-        $this->returnError('未查到相关数据，请重新申请！');
+        $this->returnError('验证码有误！请重新申请！');
     }
     if($check['Ff_msgcheck']['checkcode']!=$params['checkcode']){
         if($check['Ff_msgcheck']['times']>3){
+            $this->Ff_msgcheck->id=$check['Ff_msgcheck']['Id'];//设置id
+            $msgcheck = $this->Ff_msgcheck->read();//读取数据
+            $this->Ff_msgcheck->saveField('status', 2);//更新数据
+            $this->Ff_msgcheck->clear();
             $this->returnError('连续输错3次，验证码失效，请重新申请！');
         }
-        $this->Ff_msgcheck->id=$check['Ff_msgcheck']['id'];//设置id
+        $this->Ff_msgcheck->id=$check['Ff_msgcheck']['Id'];//设置id
         $msgcheck = $this->Ff_msgcheck->read();//读取数据
         $this->Ff_msgcheck->saveField('times', $msgcheck['Ff_msgcheck']['times']+1);//更新数据
-        $this->returnError('验证码错误！');
+        $this->Ff_msgcheck->clear();
+        $this->returnError('验证码有误！');
     }
     $check = $check['Ff_msgcheck'];
     if($check['flag']==0){
@@ -531,7 +528,7 @@ public function RegistCheck (){
     //查询是否有用户名
     $user=$this->Ff_user->find('first',array(
        'conditions' => array(
-             'Phone_number' => $params['phone_number']
+             'Phone_number' => $params['phone']
            )
     ));
 
@@ -547,7 +544,7 @@ public function RegistCheck (){
     //新增用户
     $this->Ff_user->save(array(
         'Username'      => $name,
-        'Phone_number'  => $params['phone_number'],
+        'Phone_number'  => $params['phone'],
         'Password'      => md5($params['password'])
     ));
     //查出新增数据
@@ -592,7 +589,7 @@ public function RegistCheck (){
             ));
     $r =$share->find('first',array(
                     'conditions' => array(
-                        'phone_number' => $params['phone_number']
+                        'phone_number' => $params['phone']
                     )
         ));
     if(!$r){
@@ -660,7 +657,7 @@ public function Regist(){
 
     $user=$this->Ff_user->find('first',array(
         'conditions' => array(
-          'Phone_number' => $params['phone_number']
+          'Phone_number' => $params['phone']
             )
         ));
 
@@ -668,7 +665,7 @@ public function Regist(){
        $this->returnError('此手机号已经注册！');
     }
     $this->Ff_msgcheck->save(array(
-        'phone_number'      => $params['phone_number'],
+        'phone_number'      => $params['phone'],
         'checkcode'         => $checkcode,
         'present_time'      => $present_time,
         'status'=>0,'flag'  => $params['flag']
@@ -702,7 +699,7 @@ public function Regist(){
 
     $userData=$this->Ff_user->find('first',array(
       'conditions' => array(
-        'Phone_number' => $params['phone_number']
+        'Phone_number' => $params['phone']
         )
     ));
     if(!$userData){

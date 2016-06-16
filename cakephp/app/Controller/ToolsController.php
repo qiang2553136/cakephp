@@ -34,6 +34,60 @@ public function MsgStatus(){
 
     $this->returnSucc('修改成功！','');
 }
+public function test() {
+    // $this->layout = 'ajax';//布局样式
+    $this->layout = 'ajax';
 
+    // $this->createFolder("../../ee");
+}
+public function flashapp(){
+    $result=ClassRegistry::init(array(
+            'class' => 'ff_apps', 'alias' => 'app'));
+    $datasource=$result->find('all');
+    Cache::write('apps', $datasource, 'long');
+
+    exit();
+}
+
+public function upload(){
+    if(!$_FILES){
+        $this->returnError('未发现文件');
+    }
+  if (($_FILES["file"]["size"]/1024/1024 < 2)) {
+    if ($_FILES["file"]["error"] > 0) {
+        echo "Return Code: " . $_FILES["file"]["error"] . "<br />";
+    }
+    else
+    {
+        echo "Upload: " . $_FILES["file"]["name"] . "<br />";
+        echo "Type: " . $_FILES["file"]["type"] . "<br />";
+        echo "Size: " . ($_FILES["file"]["size"] / 1024) . " Kb<br />";
+        echo "Temp file: " . $_FILES["file"]["tmp_name"] . "<br />";
+
+    if (file_exists("../../../" . $_FILES["file"]["name"]))
+      {
+      echo $_FILES["file"]["name"] . " already exists. ";
+      }
+    else
+      {
+      move_uploaded_file($_FILES["file"]["tmp_name"],
+      "../../../" . $_FILES["file"]["name"]);
+      $this->redirect($this->referer());
+      echo "Stored in: " . "" . $_FILES["file"]["name"];
+      }
+    }
+  }
+else
+  {
+  echo "Invalid file";
+  }
+
+    exit();
+}
+function createFolder($path)
+{
+  mkdir($path, 0777);
+
+}
 
 }
