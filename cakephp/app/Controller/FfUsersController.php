@@ -907,6 +907,7 @@ public function ThirdPartyLogin(){
             'Phone_number'     => $params['type'].$params['phone']
         ));
         //注册成功赠送10积分
+
         $scoreData = $this->Ff_score->find('first',array(
             'conditions' => array(
               'type' => 0
