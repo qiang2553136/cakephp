@@ -4,7 +4,7 @@ App::uses('Controller', 'Controller');
 
 class ToolsController extends AppController {
 
-    public $uses = array('Ff_msgcheck');
+    public $uses = array('Ff_msgcheck','Ff_score','Ff_software');
 //发送短信
 public function SendMsg(){
 
@@ -34,6 +34,36 @@ public function MsgStatus(){
 
     $this->returnSucc('修改成功！','');
 }
+public function getScoreInfo(){
+
+    $params =$this->checkParams(array("soft"));
+    $this->checkAppInfo($params);
+    // $params=$this->request->query;
+
+    $soft = $this->Ff_software->find('first',array(
+              'conditions'    =>array(
+                  'software_type' =>$params['soft']
+                  )
+            ));
+    if(!$soft){
+        $this->returnError('软件类型不存在！');
+    }
+
+
+    $sql = 'SELECT *
+    FROM `ff_scores` AS `Ff_score`
+    WHERE software_type_value & '.$soft['Ff_software']['software_type_value'].' != 0';
+
+    $scoreData = $this->Ff_score->query($sql);
+    if(count($scoreData)==0){
+        $this->returnError('没有相关数据！');
+    }
+
+    $this->returnSucc('查询成功！',$scoreData);
+
+}
+
+
 public function test() {
     // $this->layout = 'ajax';//布局样式
     $this->layout = 'ajax';

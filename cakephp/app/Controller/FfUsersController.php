@@ -14,11 +14,11 @@ public $uses = array('Ff_user','Ff_purchase','Ff_product',
                     'Ff_msgcheck','Ff_loginrecord','Ff_expiredtime'
                     );
 
-public function test() {
-    // $k = $this->Ff_expiredtime->query($sql);
-
-    // $this->returnSucc('1',$k);
-}
+// public function test() {
+//     // $k = $this->Ff_product->find('all');
+//     //
+//     // $this->returnSucc('1',$k);
+// }
 //登陆
 public function Login() {
 
@@ -67,7 +67,7 @@ public function AppleProving(){
     //测试服务器
     $res = $this->send_post('https://sandbox.itunes.apple.com/verifyReceipt',array('receipt-data'=>$params['receipt']));
     //正式服务器
-    // $res = $this->send_post('https://buy.itunes.apple.com/verifyReceipt',array('receipt-data'=>$receipt));
+    // $res = $this->send_post('https://buy.itunes.apple.com/verifyReceipt',array('receipt-data'=>$params['receipt']));
 
     //苹果验证返回数据
     $AppleProving = json_decode($res,true);
@@ -75,7 +75,7 @@ public function AppleProving(){
         $this->returnError('苹果验证未通过！');
     }
     //保存充值信息
-    $this->Ff_purchase->save(array(
+    $test = $this->Ff_purchase->save(array(
         'user_id' => $params['uid'],
         'purchases_time' => $params['purchases_time'],
         'store_price' => $params['balance']*$params['quantity'],
@@ -134,7 +134,7 @@ public function AppleProving(){
     }
     $this->Ff_purchase->saveField('state', 1); //更新数据
 
-    $this->returnSucc('充值成功!','');
+    $this->returnSucc('充值成功!',array());
 
 }
 
@@ -465,7 +465,7 @@ public function PresentScore() {
 //注册用户，重置密码验证
 public function RegistCheck (){
 
-    $params = $this->checkParams(array("phone_number",'password','checkcode'));
+    $params = $this->checkParams(array("phone",'password','checkcode'));
     $this->checkAppInfo($params);
     //用户名默认是手机号
     $name = $params['phone'];
@@ -489,6 +489,7 @@ public function RegistCheck (){
     }
     //当前时间
     $present_time = time();
+    $day = strtotime(date("Y-m-d",$present_time));
 
     $check = $this->Ff_msgcheck->find('first',array(
         'conditions' => array(
@@ -572,6 +573,7 @@ public function RegistCheck (){
         $this->Ff_present->save(array(
             'user_id'      =>$userData['Ff_user']['Id'],
             'present_time' =>time(),
+            'present_day'  =>$day,
             'score'        =>$Score,
             'description'  =>$s['Ff_score']['description'],
             'type'         =>$s['Ff_score']['type']
@@ -607,6 +609,7 @@ public function RegistCheck (){
     $this->Ff_present->save(array(
             'user_id'      =>$post['Ff_user']['Id'],
             'present_time' =>time(),
+            'present_day'  =>$day,
             'score'        =>$Score,
             'description'  =>'成功领取优惠卷！',
             'type'         =>9
@@ -631,6 +634,7 @@ public function RegistCheck (){
         $this->Ff_present->save(array(
             'user_id'      =>$post['Ff_user']['Id'],
             'present_time' =>time(),
+            'present_day'  =>$day,
             'score'        =>$scoreData['Ff_score']['score'],
             'description'  =>$scoreData['Ff_score']['description'],
             'type'         =>$scoreData['Ff_score']['type']
@@ -648,7 +652,7 @@ public function RegistCheck (){
 //注册申请
 public function Regist(){
 
-    $params = $this->checkParams(array("phone_number",'flag'));
+    $params = $this->checkParams(array("phone",'flag'));
     $this->checkAppInfo($params);
     //生成4位随机数
     $checkcode = rand(1000,9999);
@@ -678,7 +682,7 @@ public function Regist(){
   //  ModInfo 修改用户名密码
   public function ModInfo() {
 
-    $params = $this->checkParams(array("phone_number"));
+    $params = $this->checkParams(array("phone"));
 
     $oldpwd = '';
     $newpwd = '';
@@ -794,7 +798,7 @@ public function KeepLogin(){
             break;
     }
     unset($user['Password']);
-    $this->returnSucc('验证成功！',$user);
+    $this->returnSucc('用户数据已更新！',$user);
 
 }
 //用户余额变更记录分页（充值，消费）
@@ -891,6 +895,8 @@ public function ThirdPartyLogin(){
     $params = $this->checkParams(array("id","type","nick"));
     $this->checkAppInfo($params);
 
+    $present_time=time();
+    $day = strtotime(date("Y-m-d",$present_time));
     //判断是否传入电话号
     if(array_key_exists('phone', $params)){
         //如果没有新增user
@@ -911,7 +917,8 @@ public function ThirdPartyLogin(){
              //赠送成功后保存赠送记录
             $this->Ff_present->save(array(
                'user_id'      =>$newUser['Ff_user']['id'],
-               'present_time' =>time(),
+               'present_time' =>$present_time,
+               'present_day'  =>$day,
                'score'        =>$scoreData['Ff_score']['score'],
                'description'  =>$scoreData['Ff_score']['description'],
                'type'         =>$scoreData['Ff_score']['type']
@@ -947,7 +954,8 @@ public function ThirdPartyLogin(){
         //赠送成功后保存赠送记录
         $this->Ff_present->save(array(
                 'user_id'      =>$post['Ff_user']['Id'],
-                'present_time' =>time(),
+                'present_time' =>$present_time,
+                'present_day'  =>$day,
                 'score'        =>$Score,
                 'description'  =>'成功领取优惠卷！',
                 'type'         =>9
@@ -972,7 +980,8 @@ public function ThirdPartyLogin(){
             //保存增加积分记录
             $this->Ff_present->save(array(
                 'user_id'      =>$post['Ff_user']['Id'],
-                'present_time' =>time(),
+                'present_time' =>$present_time,
+                'present_day'  =>$day,
                 'score'        =>$scoreData['Ff_score']['score'],
                 'description'  =>$scoreData['Ff_score']['description'],
                 'type'         =>$scoreData['Ff_score']['type']
@@ -1011,6 +1020,9 @@ public function Share(){
     $params = $this->checkParams(array("id","phone"));
     // $this->checkAppInfo($params);
 
+        $present_time=time();
+        $day = strtotime(date("Y-m-d",$present_time));
+
     //查询score表对应的数据type表示类型 7（您赠送的优惠卷已被领取）
     $score = $this->Ff_score->find('first',array(
       'conditions' => array(
@@ -1030,7 +1042,8 @@ public function Share(){
    //保存赠送记录
    $this->Ff_present->save(array(
      'user_id'      =>$params['id'],
-     'present_time' =>time(),
+     'present_time' =>$present_time,
+     'present_day'  =>$day,
      'score'        =>$score['Ff_score']['score'],
      'description'  =>$score['Ff_score']['description'],
      'type'         =>$score['Ff_score']['type']
@@ -1050,6 +1063,42 @@ public function Share(){
    $this->returnSucc('积分领取成功！','');
 
 }
+public function getScoreInfo(){
+
+    $params =$this->checkParams(array("soft"));
+    $this->checkAppInfo($params);
+    // $params=$this->request->query;
+
+    $soft = $this->Ff_software->find('first',array(
+              'conditions'    =>array(
+                  'software_type' =>$params['soft']
+                  )
+            ));
+    if(!$soft){
+        $this->returnError('软件类型不存在！');
+    }
+
+
+    $sql = 'SELECT *
+    FROM `ff_scores` AS `Ff_score`
+    WHERE software_type_value & '.$soft['Ff_software']['software_type_value'].' != 0';
+
+    $scoreData = $this->Ff_score->query($sql);
+    if(count($scoreData)==0){
+        $this->returnError('没有相关数据！');
+    }
+
+    $k=array();
+    foreach ($scoreData as $key => $value) {
+        unset($value['Ff_score']['software_type_value']);
+        $temp = array_merge($value['Ff_score']);
+        array_push($k,$temp);
+    }
+
+    $this->returnSucc('查询成功！',$k);
+
+}
+
 
 }
 ?>

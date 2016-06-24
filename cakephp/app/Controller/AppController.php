@@ -167,7 +167,7 @@ public function checkParams($params) {
 public function returnError($message) {
     echo json_encode(array('success' => 0,'message' => $message));
     $this->logs($this->request->here.$message);
- exit();
+    exit();
 }
 /**
     返回成功
