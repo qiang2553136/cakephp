@@ -16,7 +16,7 @@ public $uses = array('Ff_user','Ff_purchase','Ff_product',
 
 // public function test() {
 //     // $k = $this->Ff_product->find('all');
-//     //
+//     
 //     // $this->returnSucc('1',$k);
 // }
 //登陆
