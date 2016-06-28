@@ -75,7 +75,7 @@ $('#file_upload').uploadify({
 //  'onEnable'  : function(){
 //   alert('您可以继续上传了');
 //  },
- //当文件选中的时候
+//当文件选中的时候
  'onSelect'  : function(file){
   alert(file.name+"已经添加到队列");
  }

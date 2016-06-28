@@ -4,7 +4,8 @@ App::uses('Controller', 'Controller');
 
 class ToolsController extends AppController {
 
-    public $uses = array('Ff_msgcheck','Ff_score','Ff_software');
+public $uses = array('Ff_msgcheck','Ff_score','Ff_software','Ff_product');
+
 //发送短信
 public function SendMsg(){
 
@@ -34,42 +35,12 @@ public function MsgStatus(){
 
     $this->returnSucc('修改成功！','');
 }
-public function getScoreInfo(){
-
-    $params =$this->checkParams(array("soft"));
-    $this->checkAppInfo($params);
-    // $params=$this->request->query;
-
-    $soft = $this->Ff_software->find('first',array(
-              'conditions'    =>array(
-                  'software_type' =>$params['soft']
-                  )
-            ));
-    if(!$soft){
-        $this->returnError('软件类型不存在！');
-    }
-
-
-    $sql = 'SELECT *
-    FROM `ff_scores` AS `Ff_score`
-    WHERE software_type_value & '.$soft['Ff_software']['software_type_value'].' != 0';
-
-    $scoreData = $this->Ff_score->query($sql);
-    if(count($scoreData)==0){
-        $this->returnError('没有相关数据！');
-    }
-
-    $this->returnSucc('查询成功！',$scoreData);
-
-}
-
-
-public function test() {
-    // $this->layout = 'ajax';//布局样式
-    $this->layout = 'ajax';
-
-    // $this->createFolder("../../ee");
-}
+// public function test() {
+//     // $this->layout = 'ajax';//布局样式
+//     $this->layout = 'ajax';
+//
+//     // $this->createFolder("../../ee");
+// }
 public function flashapp(){
     $result=ClassRegistry::init(array(
             'class' => 'ff_apps', 'alias' => 'app'));
@@ -78,46 +49,59 @@ public function flashapp(){
 
     exit();
 }
-
+//文件上传
 public function upload(){
-    if(!$_FILES){
-        $this->returnError('未发现文件');
-    }
-  if (($_FILES["file"]["size"]/1024/1024 < 2)) {
-    if ($_FILES["file"]["error"] > 0) {
-        echo "Return Code: " . $_FILES["file"]["error"] . "<br />";
-    }
-    else
-    {
-        echo "Upload: " . $_FILES["file"]["name"] . "<br />";
-        echo "Type: " . $_FILES["file"]["type"] . "<br />";
-        echo "Size: " . ($_FILES["file"]["size"] / 1024) . " Kb<br />";
-        echo "Temp file: " . $_FILES["file"]["tmp_name"] . "<br />";
 
-    if (file_exists("../../../" . $_FILES["file"]["name"]))
-      {
-      echo $_FILES["file"]["name"] . " already exists. ";
-      }
-    else
-      {
-      move_uploaded_file($_FILES["file"]["tmp_name"],
-      "../../../" . $_FILES["file"]["name"]);
-      $this->redirect($this->referer());
-      echo "Stored in: " . "" . $_FILES["file"]["name"];
-      }
+    $verifyToken = md5('unique_salt' . $_POST['timestamp']);
+
+
+    if (!empty($_FILES) && $_POST['token'] == $verifyToken) {
+        $name = explode('.', $_FILES["Filedata"]["name"], 2);
+        $time = $_POST['timestamp'];
+    	$tempFile = $_FILES['Filedata']['tmp_name'];
+
+    	// Validate the file type
+    	$fileTypes = array('zip','sql','txt'); // 设置什么后缀可以上传
+    	$fileParts = pathinfo($_FILES['Filedata']['name']);
+
+    	if (in_array($fileParts['extension'],$fileTypes)) {
+            $this->createFolder("../".$name[0]);
+            move_uploaded_file($tempFile,
+            "../".$name[0]."/".$time.'.zip');
+
+            $this->Ff_product->findById($name[0]);
+
+            $this->Ff_product->id = $name[0];
+            $pro = $this->Ff_product->read();
+            if(!$pro){
+                echo '科目不存在！';
+            }
+            $this->Ff_product->saveField('update_time',$time); //更新数据
+
+
+
+    	} else {
+    		echo 'Invalid file type.';
+    	}
     }
-  }
-else
-  {
-  echo "Invalid file";
-  }
 
     exit();
 }
-function createFolder($path)
-{
-  mkdir($path, 0777);
+function createFolder($path){
+    if(!is_dir($path)){
+        mkdir($path, 0777);
+    }
+}
+function index(){
+
+    $this->layout = 'ajax';
+    // $redis = new redis();
+    // $redis->connect('127.0.0.1', 6379);
+    // $result = $redis->incr('test');
+    // echo($result);   //结果：string(11) "11111111111"
+    // exit();
 
 }
+
 
 }
